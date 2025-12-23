@@ -1,26 +1,34 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Default: Light Mode (Biru & Putih) */
+  --background: #f0f7ff;
+  /* Putih kebiruan segar */
+  --foreground: #1e3a8a;
+  /* Biru Navy (teks) */
+  --primary: #3b82f6;
+  /* Biru Utama */
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* Selector ini memungkinkan kita memaksa dark mode dengan menambah class="dark" di <html> */
+.dark {
+  --background: #0f172a;
+  /* Navy sangat gelap */
+  --foreground: #e2e8f0;
+  /* Teks abu terang */
+  --primary: #60a5fa;
+  /* Biru lebih terang */
 }
 
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-primary: var(--primary);
   }
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
 }
