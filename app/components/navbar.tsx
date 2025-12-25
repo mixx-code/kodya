@@ -114,6 +114,23 @@ function Navbar() {
             {isMobileMenuOpen && (
                 <div className="absolute top-14 left-0 right-0 bg-white md:hidden shadow-xl z-40 border-t border-gray-200">
                     <div className="flex flex-col max-h-[calc(100vh-3.5rem)] overflow-y-auto">
+                        {/* Profile Section */}
+                        <div className="px-4 py-4 bg-amber-50">
+                            <div className="flex items-center gap-3 px-3 py-2">
+                                <Image
+                                    alt="Profile"
+                                    src={Logo}
+                                    className="w-12 h-12 rounded-full object-cover border-2 border-amber-200"
+                                />
+                                <div className="flex-1">
+                                    <p className="text-gray-900 text-sm font-semibold">
+                                        Rizki Febriansyah
+                                    </p>
+                                    <p className="text-gray-600 text-xs">rizki@mail.com</p>
+                                </div>
+                            </div>
+                        </div>
+
                         {/* Navigation Links */}
                         <div className="px-4 py-3 space-y-1">
                             <a
@@ -141,23 +158,6 @@ function Navbar() {
 
                         {/* Divider */}
                         <div className="border-t border-gray-200"></div>
-
-                        {/* Profile Section */}
-                        <div className="px-4 py-4 bg-amber-50">
-                            <div className="flex items-center gap-3 px-3 py-2">
-                                <Image
-                                    alt="Profile"
-                                    src={Logo}
-                                    className="w-12 h-12 rounded-full object-cover border-2 border-amber-200"
-                                />
-                                <div className="flex-1">
-                                    <p className="text-gray-900 text-sm font-semibold">
-                                        Rizki Febriansyah
-                                    </p>
-                                    <p className="text-gray-600 text-xs">rizki@mail.com</p>
-                                </div>
-                            </div>
-                        </div>
 
                         {/* Divider */}
                         <div className="border-t border-gray-200"></div>
