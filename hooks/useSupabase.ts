@@ -91,10 +91,12 @@ export function useOAuth() {
         setError(null)
 
         try {
+            const redirectTo = `${window.location.origin}/auth/callback`
+            console.log('OAuth Redirect URL:', redirectTo) // DEBUG
             const { data, error } = await supabase.auth.signInWithOAuth({
                 provider,
                 options: {
-                    redirectTo: `${window.location.origin}/auth/callback`,
+                    redirectTo,
                     queryParams: {
                         access_type: 'offline',
                         prompt: 'consent',
