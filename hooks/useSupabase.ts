@@ -94,8 +94,7 @@ export function useOAuth() {
             const { data, error } = await supabase.auth.signInWithOAuth({
                 provider,
                 options: {
-                    redirectTo: `https://kodya.vercel.app/auth/callback`,
-                    // redirectTo: `${window.location.origin}/auth/callback`,
+                    redirectTo: `${window.location.origin}/auth/callback`,
                     queryParams: {
                         access_type: 'offline',
                         prompt: 'consent',
@@ -122,8 +121,7 @@ export function useOAuth() {
             const { data, error } = await supabase.auth.signInWithOAuth({
                 provider,
                 options: {
-                    redirectTo: `https://kodya.vercel.app/auth/callback?action=signup`,
-                    // redirectTo: `${window.location.origin}/auth/callback?action=signup`,
+                    redirectTo: `${window.location.origin}/auth/callback?action=signup`,
                     queryParams: {
                         access_type: 'offline',
                         prompt: 'consent',
