@@ -26,6 +26,8 @@ function Saldo() {
 
     const itemsPerPage = 5;
 
+    
+
     // --- LOGIKA FETCH DATA (CURSOR BASED) ---
     const fetchData = async (isInitial = true) => {
         if (!user) return;
@@ -63,6 +65,7 @@ function Saldo() {
             if (historyData) {
                 const more = historyData.length > itemsPerPage;
                 const resultData = more ? historyData.slice(0, itemsPerPage) : historyData;
+                console.log("topupHistory: ", historyData);
 
                 setTopupHistory(prev => isInitial ? resultData : [...prev, ...resultData]);
                 setHasMore(more);
@@ -227,7 +230,11 @@ function Saldo() {
                                                 </button>
                                             )}
                                             <span className={`text-[10px] font-black px-3 p-2 rounded-lg uppercase ${getStatusStyle(trx.status)}`}>
-                                                {trx.status === 'settlement' || trx.status === 'success' ? 'Berhasil' : 'Pending'}
+                                                {trx.status === 'settlement' || trx.status === 'success'
+                                                    ? 'Berhasil'
+                                                    : trx.status === 'expire'
+                                                        ? 'Kedaluwarsa'
+                                                        : 'Tertunda'}
                                             </span>
                                         </div>
                                     </div>
