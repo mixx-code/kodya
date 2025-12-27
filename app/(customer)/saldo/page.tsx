@@ -5,7 +5,6 @@ import PaymentModal from '@/app/components/paymentModal';
 import { createClient } from '@/lib/supabase-client';
 import { Tables } from '@/types/supabase';
 import { useAuth } from '@/hooks/useSupabase';
-import type { MidtransSnapResult } from '@/types/midtrans';
 
 type SaldoRow = Tables<'saldo'>;
 type TopupHistoryRow = Tables<'topup_history'>;

@@ -5,6 +5,7 @@ import { Loader2, Wallet } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useSupabase';
 
+
 interface MidtransSnapResult {
     status_code: string;
     status_message: string;
