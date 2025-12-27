@@ -21,9 +21,22 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'example.com',
+        hostname: 'electric-hideously-drake.ngrok-free.app',
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'placehold.co', // Untuk gambar placeholder
+      },
+      {
+        protocol: 'https',
+        hostname: 'fbtjmhsclyfdtfghfxxx.supabase.co', // GANTI dengan hostname Supabase Anda
+      },
+      {
+        protocol: 'https',
+        hostname: 'ppujrcixcibvfrcmxjxr.supabase.co',
+        pathname: '/storage/v1/object/public/**',
       },
     ],
     // Atau gunakan domains array untuk cara lama

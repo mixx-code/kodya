@@ -38,45 +38,57 @@ export async function POST(request: NextRequest) {
         const status = body.transaction_status;
         const orderId = body.order_id;
 
-        // 3. Update tabel topup_history
-        const { data: topupList, error: updateError } = await supabaseAdmin
+        // 3. Get existing transaction data first
+        const { data: existingTopup, error: fetchError } = await supabaseAdmin
+            .from('topup_history')
+            .select('user_id, amount, status')
+            .eq('order_id', orderId)
+            .single();
+
+        if (fetchError || !existingTopup) {
+            console.warn('⚠️ Order ID tidak terdaftar:', orderId);
+            return NextResponse.json({ message: 'Order not found' }, { status: 200 });
+        }
+
+        // Prevent duplicate processing - jika sudah success, jangan proses lagi
+        if (existingTopup.status === 'settlement' || existingTopup.status === 'capture' || existingTopup.status === 'success') {
+            console.log('⚠️ Transaction already processed:', orderId);
+            return NextResponse.json({ message: 'Already processed' }, { status: 200 });
+        }
+
+        // 4. Update tabel topup_history
+        const { error: updateError } = await supabaseAdmin
             .from('topup_history')
             .update({
                 status: status,
                 payment_type: body.payment_type,
                 updated_at: new Date().toISOString()
             })
-            .eq('order_id', orderId)
-            .select('user_id, amount'); // Ini menghasilkan Array
+            .eq('order_id', orderId);
 
         if (updateError) {
             console.error('❌ Database Update Error:', updateError.message);
             return NextResponse.json({ error: updateError.message }, { status: 500 });
         }
 
-        // Cek apakah data ditemukan (mencegah error pada notifikasi test Midtrans)
-        if (!topupList || topupList.length === 0) {
-            console.warn('⚠️ Order ID tidak terdaftar:', orderId);
-            return NextResponse.json({ message: 'Order not found' }, { status: 200 });
-        }
-
-        // Ambil data pertama dari array
-        const topup = topupList[0];
-
-        // 4. Jika status SETTLEMENT atau CAPTURE, tambahkan saldo ke user
+        // 5. Jika status SETTLEMENT atau CAPTURE, tambahkan saldo ke user
         if (status === 'settlement' || status === 'capture') {
-            // Sekarang topup.user_id sudah bisa diakses dengan aman
-            console.log('✅ Payment success! Adding balance to user:', topup.user_id);
+            console.log('✅ Payment success! Adding balance to user:', existingTopup.user_id);
 
             const { error: rpcError } = await supabaseAdmin.rpc('increment_saldo', {
-                user_id_param: topup.user_id,
-                amount_param: parseFloat(body.gross_amount)
+                user_id_param: existingTopup.user_id,
+                amount_param: existingTopup.amount
             });
 
             if (rpcError) {
                 console.error('❌ RPC Error (Increment Saldo):', rpcError.message);
                 return NextResponse.json({ error: rpcError.message }, { status: 500 });
             }
+        }
+
+        // 6. Handle expired transactions - mark as failed
+        if (status === 'expire' || status === 'cancel' || status === 'deny') {
+            console.log('⏰ Transaction expired/cancelled:', orderId);
         }
 
         return NextResponse.json({ message: 'Webhook Processed' }, { status: 200 });

@@ -1,112 +1,100 @@
 "use client";
 import { ProductCard } from '@/app/components/productCard'
 import { ShowWindow } from '@/app/components/showWindow'
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ShoppingBag } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { createClient } from '@/lib/supabase-client'; // Client-side supabase
 
 function Category() {
     const params = useParams();
     const router = useRouter();
-    const categorySlug = params.category as string;
+    const categorySlug = params.category as string; // Sesuai nama folder [categorySlug]
 
-    const products = [
-        {
-            id: 1,
-            title: "Website E-Commerce Premium",
-            description: "Template website toko online lengkap dengan admin panel dan fitur payment gateway",
-            price: "Rp 2.500.000",
-            image: "/product-1.jpg",
-            category: "Web",
-            rating: 4.8,
-            sales: 45,
-        },
-        {
-            id: 2,
-            title: "Landing Page Bisnis",
-            description: "Desain landing page modern dan responsif untuk meningkatkan konversi bisnis Anda",
-            price: "Rp 1.500.000",
-            image: "/product-2.jpg",
-            category: "Web",
-            rating: 4.9,
-            sales: 67,
-        },
-        {
-            id: 3,
-            title: "Dashboard Admin Modern",
-            description: "Template dashboard admin dengan berbagai fitur lengkap dan analytics",
-            price: "Rp 1.800.000",
-            image: "/product-1.jpg",
-            category: "React JS",
-            rating: 5.0,
-            sales: 32,
-        },
-        {
-            id: 4,
-            title: "Mobile App UI Kit",
-            description: "Kumpulan UI components untuk aplikasi mobile dengan desain modern",
-            price: "Rp 1.200.000",
-            image: "/product-2.jpg",
-            category: "Android",
-            rating: 4.7,
-            sales: 28,
-        },
-        {
-            id: 5,
-            title: "CMS Laravel Advanced",
-            description: "Content Management System dengan Laravel dan fitur lengkap",
-            price: "Rp 3.200.000",
-            image: "/product-1.jpg",
-            category: "Laravel",
-            rating: 4.9,
-            sales: 19,
-        },
-        {
-            id: 6,
-            title: "Next.js Starter Kit",
-            description: "Boilerplate Next.js dengan TypeScript dan best practices",
-            price: "Rp 900.000",
-            image: "/product-2.jpg",
-            category: "Next JS",
-            rating: 4.8,
-            sales: 51,
-        },
-    ];
+    const [products, setProducts] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
 
-    // Filter products by category
-    const filteredProducts = products.filter(
-        product => product.category.toLowerCase().replace(/\s+/g, '-') === categorySlug
-    );
+    useEffect(() => {
+        const fetchProducts = async () => {
+            setLoading(true);
+            const supabase = createClient();
+
+            const { data, error } = await supabase
+                .from('products')
+                .select('*');
+
+            if (!error && data) {
+                // Filter berdasarkan slug yang diklik dari CategorySection sebelumnya
+                const filtered = data.filter(
+                    product => product.category?.toLowerCase().replace(/\s+/g, '-') === categorySlug
+                );
+                setProducts(filtered);
+            }
+            setLoading(false);
+        };
+
+        if (categorySlug) fetchProducts();
+    }, [categorySlug]);
+
+    // Format title agar cantik (contoh: next-js -> Next Js)
+    const displayTitle = categorySlug?.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+
     return (
-        <>
-            {/* Mobile Back Button */}
-            <div className="md:hidden mb-4">
-                <button
-                    onClick={() => router.back()}
-                    className="flex items-center gap-2 text-gray-700 hover:text-blue-600 transition-colors"
-                >
+        <div className="container mx-auto px-4 py-6">
+            {/* Back Button */}
+            <button
+                onClick={() => router.back()}
+                className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-all mb-6 group"
+            >
+                <div className="p-2 rounded-full group-hover:bg-blue-50">
                     <ArrowLeft className="w-5 h-5" />
-                    <span className="font-medium">Kembali</span>
-                </button>
-            </div>
+                </div>
+                <span className="font-medium">Kembali ke Beranda</span>
+            </button>
 
             <ShowWindow
-                title={`Produk ${categorySlug || 'Kami'}`}
-                description="Temukan berbagai produk digital berkualitas untuk kebutuhan project Anda"
+                title={`Kategori: ${displayTitle}`}
+                description={`Menampilkan semua produk dalam kategori ${displayTitle}`}
             >
-                {filteredProducts.length > 0 ? (
+                {loading ? (
+                    // Skeleton Loading
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {[1, 2, 3].map((i) => (
+                            <div key={i} className="h-80 bg-gray-100 animate-pulse rounded-2xl" />
+                        ))}
+                    </div>
+                ) : products.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                        {filteredProducts.map((product) => (
-                            <ProductCard key={product.id} {...product} />
+                        {products.map((product) => (
+                            <ProductCard
+                                key={product.id}
+                                {...product}
+                                // Mapping jika nama field di DB berbeda
+                                image={product.images?.[0] || '/placeholder.jpg'}
+                            />
                         ))}
                     </div>
                 ) : (
-                    <div className="text-center py-12">
-                        <p className="text-gray-600">Tidak ada produk di kategori ini</p>
+                    // Empty State yang lebih cantik
+                    <div className="text-center py-20 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200">
+                        <div className="bg-gray-200 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <ShoppingBag className="w-8 h-8 text-gray-400" />
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-800">Produk Kosong</h3>
+                        <p className="text-gray-500 max-w-xs mx-auto mt-2">
+                            Maaf, saat ini belum ada produk untuk kategori <b>{displayTitle}</b>.
+                        </p>
+                        <button
+                            onClick={() => router.push('/')}
+                            className="mt-6 text-blue-600 font-semibold hover:underline"
+                        >
+                            Lihat Kategori Lain
+                        </button>
                     </div>
                 )}
             </ShowWindow>
-        </>
+        </div>
     )
 }
 
-export default Category
+export default Category;

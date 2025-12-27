@@ -5,17 +5,27 @@ import { Loader2, Wallet } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useSupabase';
 
-// Definisikan tipe untuk window.snap agar tidak 'any'
+interface MidtransSnapResult {
+    status_code: string;
+    status_message: string;
+    transaction_id: string;
+    order_id: string;
+    gross_amount: string;
+    payment_type: string;
+    transaction_time: string;
+    transaction_status: string;
+}
+
 interface SnapOptions {
-    onSuccess: (result: string) => void;
-    onPending: (result: string) => void;
-    onError: (result: string) => void;
-    onClose: () => void;
+    onSuccess?: (result: MidtransSnapResult) => void;
+    onPending?: (result: MidtransSnapResult) => void;
+    onError?: (result: MidtransSnapResult) => void;
+    onClose?: () => void;
 }
 
 declare global {
     interface Window {
-        snap: {
+        snap?: {
             pay: (token: string, options: SnapOptions) => void;
         };
     }
@@ -73,7 +83,7 @@ export default function PaymentModal({ isOpen, onClose, clientKey }: PaymentModa
     };
 
     const handlePayment = async () => {
-        // Validasi minimal 10.000 (disarankan sesuai kebijakan Midtrans/Umum)
+        // Validasi minimal 10.000
         if (!amount || Number(amount) < 10000) {
             setError('Minimal top up Rp 10.000');
             return;
@@ -107,37 +117,64 @@ export default function PaymentModal({ isOpen, onClose, clientKey }: PaymentModa
                 throw new Error(data.error || 'Gagal membuat pembayaran');
             }
 
-            if (window.snap) {
-                window.snap.pay(data.token, {
-                    onSuccess: (result) => {
-                        console.log('Success:', result);
-                        alert("Top up berhasil!");
-                        onClose();
-                        setAmount("");
-                        setLoading(false);
-                    },
-                    onPending: (result) => {
-                        console.log('Pending:', result);
-                        alert("Selesaikan pembayaran Anda.");
-                        onClose();
-                        setLoading(false);
-                    },
-                    onError: (result) => {
-                        console.error('Error:', result);
-                        setError('Pembayaran gagal, silakan coba lagi.');
-                        setLoading(false);
-                    },
-                    onClose: () => {
-                        setLoading(false);
-                    }
-                });
-            } else {
-                throw new Error('Sistem pembayaran belum siap.');
+            // Tunggu window.snap tersedia
+            let retries = 0;
+            const maxRetries = 10;
+
+            while (!window.snap && retries < maxRetries) {
+                await new Promise(resolve => setTimeout(resolve, 300));
+                retries++;
             }
+
+            if (!window.snap) {
+                throw new Error('Sistem pembayaran belum siap. Silakan refresh halaman.');
+            }
+
+            // Mark snap as opened
+            await markSnapOpened(data.orderId);
+
+            // Buka Snap Payment dengan redirect callbacks
+            window.snap.pay(data.token, {
+                onSuccess: (result: MidtransSnapResult) => {
+                    console.log('Payment success:', result);
+                    // Redirect ke halaman saldo dengan parameter success
+                    window.location.href = '/saldo?payment=success';
+                },
+                onPending: (result: MidtransSnapResult) => {
+                    console.log('Payment pending:', result);
+                    // Redirect ke halaman saldo dengan parameter pending
+                    window.location.href = '/saldo?payment=pending';
+                },
+                onError: (result: MidtransSnapResult) => {
+                    console.error('Payment error:', result);
+                    // Redirect ke halaman saldo dengan parameter failed
+                    window.location.href = '/saldo?payment=failed';
+                },
+                onClose: () => {
+                    console.log('Payment popup closed');
+                    setLoading(false);
+                }
+            });
+
         } catch (err) {
             const msg = err instanceof Error ? err.message : 'Terjadi kesalahan sistem';
             setError(msg);
             setLoading(false);
+        }
+    };
+
+    const markSnapOpened = async (orderId: string) => {
+        try {
+            await fetch('/api/payment/mark-opened', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ orderId }),
+            });
+        } catch (error) {
+            console.error('Error marking snap as opened:', error);
+            // Non-critical error, continue with payment
         }
     };
 
@@ -152,7 +189,6 @@ export default function PaymentModal({ isOpen, onClose, clientKey }: PaymentModa
                 exit={{ opacity: 0 }}
                 onClick={onClose}
                 className="absolute inset-0 bg-slate-900/40 backdrop-blur-md"
-            // className="absolute inset-0 bg-slate-900/40 backdrop-blur-md"
             />
 
             {/* Modal Card */}
@@ -209,7 +245,7 @@ export default function PaymentModal({ isOpen, onClose, clientKey }: PaymentModa
                                 onClick={() => handleQuickAmount(val)}
                                 disabled={loading}
                                 className={`py-3 rounded-2xl text-[13px] font-bold transition-all active:scale-95 border ${amount === val.toString()
-                                    ? 'bg-purple-600 border-purple-600 text-black shadow-lg shadow-purple-200'
+                                    ? 'bg-purple-600 border-purple-600 text-white shadow-lg shadow-purple-200'
                                     : 'bg-white border-gray-100 text-gray-600 hover:border-purple-200 hover:bg-purple-50'
                                     }`}
                             >
@@ -218,30 +254,18 @@ export default function PaymentModal({ isOpen, onClose, clientKey }: PaymentModa
                         ))}
                     </div>
 
-                    {/* Secure Info - Menggunakan aksen Blue-200 sesuai ciri khasmu */}
-                    {/* <div className="flex items-center mt-2 gap-3 p-4 bg-blue-50 rounded-2xl border border-blue-200">
-                        <div className="p-2 bg-white rounded-lg shadow-sm text-blue-600">
-                            <CreditCard className="w-5 h-5" />
-                        </div>
-                        <dd className="text-[12px]  font-medium">
-                            Keamanan data Anda terjaga. Anda akan diarahkan ke gateway pembayaran Midtrans yang aman.
-                        </dd>
-                    </div> */}
-
                     {/* Action Buttons */}
                     <div className="flex flex-col gap-3 pt-2">
                         {/* Button Bayar: Blue Theme */}
                         <button
                             onClick={handlePayment}
-                            disabled={loading || !amount || Number(amount) < 1000}
+                            disabled={loading || !amount || Number(amount) < 10000}
                             className="w-full h-14 py-4.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-lg shadow-lg shadow-blue-200 disabled:bg-slate-200 disabled:text-slate-500 transition-all active:scale-[0.98] flex items-center justify-center gap-3 cursor-pointer"
                         >
                             {loading ? (
                                 <Loader2 className="w-6 h-6 animate-spin text-white" />
                             ) : (
-                                <>
-                                    <span className="text-white">Bayar Sekarang</span>
-                                </>
+                                <span className="text-white">Bayar Sekarang</span>
                             )}
                         </button>
 

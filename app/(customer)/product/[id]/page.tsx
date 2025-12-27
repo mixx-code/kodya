@@ -1,5 +1,34 @@
-import { ProductDetailExample } from "@/app/components/productDetail";
+// app/(customer)/product/[id]/page.tsx
+import ProductDetail from "@/app/components/productDetail";
+import { notFound } from "next/navigation";
+import { getProductById } from "../actions/product";
 
-export default function ProductPage() {
-    return <ProductDetailExample />;
+export default async function ProductPage({ params }: { params: { id: string } }) {
+    const { id } = await params; // Next.js 15 mewajibkan await params
+    const productId = parseInt(id);
+
+    if (isNaN(productId)) notFound();
+
+    const product = await getProductById(productId);
+
+    if (!product) {
+        notFound(); // Akan menampilkan 404 jika ID tidak ada di DB
+    }
+
+    return (
+        <ProductDetail
+            id={product.id}
+            title={product.title}
+            description={product.description || ""}
+            price={product.price || "0"}
+            category={product.category || ""}
+            rating={product.rating || 0}
+            reviews={product.reviews || 0}
+            sales={product.sales || 0}
+            images={product.images || []}
+            features={product.features || []}
+            techStack={product.tech_stack || []}
+            demoUrl={product.demo_url || ""}
+        />
+    );
 }

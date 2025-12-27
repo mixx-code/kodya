@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import midtransClient from 'midtrans-client';
 import { createClient } from '@supabase/supabase-js';
 
-// Definisi Interface untuk input
 interface CustomerDetails {
     id: string;
     full_name: string;
@@ -36,8 +35,13 @@ export async function POST(request: NextRequest) {
         const snap = new midtransClient.Snap({
             isProduction: process.env.MIDTRANS_IS_PRODUCTION === 'true',
             serverKey: process.env.MIDTRANS_SERVER_KEY || '',
-            clientKey: process.env.MIDTRANS_CLIENT_KEY || '',
+            clientKey: process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || '',
         });
+
+        // Get base URL from request
+        const protocol = request.headers.get('x-forwarded-proto') || 'http';
+        const host = request.headers.get('host') || 'localhost:3000';
+        const baseUrl = `${protocol}://${host}`;
 
         const parameter = {
             transaction_details: {
@@ -56,9 +60,37 @@ export async function POST(request: NextRequest) {
                     name: 'Top Up Saldo',
                 },
             ],
+            enabled_payments: [
+                'credit_card',
+                'mandiri_clickpay',
+                'cimb_clicks',
+                'bca_klikbca',
+                'bca_klikpay',
+                'bri_epay',
+                'echannel',
+                'permata_va',
+                'bca_va',
+                'bni_va',
+                'bri_va',
+                'other_va',
+                'gopay',
+                'indomaret',
+                'alfamart',
+                'danamon_online',
+                'akulaku',
+                'shopeepay',
+                'qris'
+            ],
+            credit_card: {
+                secure: true
+            },
+            callbacks: {
+                finish: `${baseUrl}/saldo?payment=success`
+            }
         };
 
-        // Tipe data dari createTransaction biasanya object dengan token & redirect_url
+        console.log('Creating payment with callback URL:', `${baseUrl}/saldo?payment=success`);
+
         const transaction = await snap.createTransaction(parameter) as { token: string; redirect_url: string };
 
         const { error: dbError } = await supabaseAdmin.from('topup_history').insert({
@@ -69,7 +101,12 @@ export async function POST(request: NextRequest) {
             snap_token: transaction.token
         });
 
-        if (dbError) throw new Error(dbError.message);
+        if (dbError) {
+            console.error('Database error:', dbError);
+            throw new Error(dbError.message);
+        }
+
+        console.log('Payment created:', { orderId, token: transaction.token });
 
         return NextResponse.json({
             token: transaction.token,

@@ -15,18 +15,27 @@ import {
   CirclePlus,
   Wallet,
 } from "lucide-react";
-import { useAuth, useSignOut } from "@/hooks/useSupabase";
+import { useAuth, useRole, useSignOut } from "@/hooks/useSupabase";
 import { useRouter } from "next/navigation";
 import PaymentModal from "./paymentModal";
+import { Tables } from '@/types/supabase';
+import { createClient } from "@/lib/supabase-client";
+import Link from "next/link";
+type SaldoRow = Tables<'saldo'>;
 
 function Navbar() {
   const router = useRouter();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [saldo, setSaldo] = useState<SaldoRow | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   // Gunakan hook auth untuk mendapatkan data user
-  const { user, loading: authLoading, error } = useAuth();
+  const { user, loading: authLoading, error: authError } = useAuth();
+  const { role, loading: roleLoading, error: roleError } = useRole()
+  console.log("role: ", role)
   const { signOut, loading: signOutLoading } = useSignOut();
   console.log("data user: ", user)
 
@@ -41,6 +50,53 @@ function Navbar() {
     } catch (error) {
       console.error("Logout failed:", error);
     }
+  };
+
+  useEffect(() => {
+    const fetchSaldoData = async () => {
+      // Jangan fetch saldo jika:
+      // 1. Masih loading auth
+      // 2. Ada error auth
+      // 3. User belum login (user null)
+      if (authLoading) return;
+      if (authError) {
+        setError(authError.message);
+        setLoading(false);
+        return;
+      }
+      if (!user) {
+        // Reset saldo dan set loading selesai jika user tidak login
+        setSaldo(null);
+        setError(null);
+        setLoading(false);
+        return;
+      }
+
+      // Hanya eksekusi query jika user sudah login
+      const supabase = createClient();
+      try {
+        const userId = user.id;
+        const saldoResponse = await supabase.from('saldo').select('*').eq('id', userId).maybeSingle();
+        if (saldoResponse.error) {
+          setSaldo({ id: userId, amount: 0, currency: 'IDR', last_transaction_at: null, updated_at: null });
+        } else {
+          setSaldo(saldoResponse.data);
+        }
+        setError(null);
+      } catch (err) {
+        setError('Terjadi kesalahan saat memuat data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSaldoData();
+  }, [user, authLoading, authError]);
+
+  const formatCurrency = (amount: number | null) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency', currency: 'IDR', minimumFractionDigits: 0
+    }).format(amount || 0);
   };
 
   // Tutup dropdown ketika klik di luar
@@ -83,13 +139,33 @@ function Navbar() {
 
   // Navigasi berdasarkan status login
   const getMenuItems = () => {
+    // 1. Jika User Belum Login
     if (!user) {
       return [
-        { href: "/auth/login", label: "Dashboard" },
+        { href: "/", label: "Market" },
+        { href: "/auth/login", label: "Masuk" },
       ];
     }
+
+    // Ambil role dari metadata (pastikan saat registrasi/update role ini disimpan di metadata)
+    const isAdmin = role === 'admin';
+    console.log("user: ", user);
+    console.log("isAdmin: ", isAdmin);
+    // 2. Jika User adalah Admin
+    if (isAdmin) {
+      return [
+        { href: "/", label: "Market" },
+        { href: "/dashboard", label: "Dashboard" },
+        { href: "/products", label: "List Products" },
+        { href: "/products/create", label: "Create Product", isHighlight: true },
+        { href: "/cart", label: "", icon: <ShoppingCart className="w-5 h-5" /> },
+      ];
+    }
+
+    // 3. Jika User adalah Pembeli Biasa
     return [
-      { href: "/dashboard", label: "Dashboard" },
+      { href: "/", label: "Market" },
+      { href: "/my-orders", label: "Pesanan Saya" },
       { href: "/cart", label: "", icon: <ShoppingCart className="w-5 h-5" /> },
     ];
   };
@@ -147,30 +223,41 @@ function Navbar() {
           <a
             key={index}
             href={item.href}
-            className={`flex items-center gap-1 ${item.icon ? "relative" : ""} text-white hover:text-blue-200 transition-colors`}
+            className={`flex items-center gap-1 transition-colors ${item.icon ? "relative" : ""
+              } ${
+              item.isHighlight
+                ? "bg-yellow-400 text-blue-950 px-3 py-1.5 rounded-lg font-bold hover:bg-yellow-300"
+                : "text-white hover:text-blue-200"
+              }`}
           >
             {item.icon && item.icon}
             {item.label}
+            {/* Badge Cart */}
             {item.href === "/cart" && (
-              <span className="absolute -top-2 -right-2 text-[0.8em] bg-red-600 w-5 h-5 rounded-full flex items-center justify-center">
+              <span className="absolute -top-2 -right-2 text-[10px] bg-red-600 text-white w-4 h-4 rounded-full flex items-center justify-center font-bold">
                 9+
               </span>
             )}
           </a>
         ))}
-        <div className="flex items-center gap-3 bg-white/10 hover:bg-white/15 backdrop-blur-md border border-white/20 p-1.5 pl-4 rounded-xl transition-all">
-          <div className="text-left">
-            <p className="text-[9px] text-blue-200 uppercase font-medium">Saldo</p>
-            <p className="text-sm font-bold text-white tracking-wide">Rp100.000.000</p>
-          </div>
-          <button 
-            className="bg-blue-500 hover:bg-blue-400 p-2 rounded-lg text-white shadow-lg shadow-blue-900/20 transition-all"
-            onClick={() => setIsModalOpen(true)}
-          >
-            <CirclePlus size={18} />
-          </button>
-        </div>
-        
+
+        {/* Saldo Display - Hanya tampil jika user sudah login */}
+        {user && (
+          <Link href="/saldo">
+            <div className="flex items-center gap-3 bg-white/10 hover:bg-white/15 backdrop-blur-md border border-white/20 p-1.5 pl-4 rounded-xl transition-all">
+              <div className="text-left">
+                <p className="text-[9px] text-blue-200 uppercase font-medium">Saldo</p>
+                <p className="text-sm font-bold text-white tracking-wide">{formatCurrency(saldo?.amount || 0)},00</p>
+              </div>
+              <button
+                className="bg-blue-500 hover:bg-blue-400 p-2 rounded-lg text-white shadow-lg shadow-blue-900/20 transition-all"
+                onClick={() => setIsModalOpen(true)}
+              >
+                <CirclePlus size={18} />
+              </button>
+            </div>
+          </Link>
+        )}
 
         {/* Profile Dropdown - Hanya tampil jika user sudah login */}
         {user && (
@@ -286,29 +373,27 @@ function Navbar() {
           <div className="flex flex-col max-h-[calc(100vh-3.5rem)] overflow-y-auto">
             {/* Profile Section - Hanya tampil jika user login */}
             {user && (
-              <div className="px-4 py-4 bg-blue-50">
-                <div className="flex items-center gap-3 px-3 py-2">
-                  {getUserAvatar() ? (
-                    <Image
-                      alt="Profile"
-                      src={getUserAvatar()}
-                      width={48}
-                      height={48}
-                      className="w-12 h-12 rounded-full object-cover border-2 border-blue-200"
-                    />
-                  ) : (
-                    <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center border-2 border-blue-200">
-                      <User className="w-6 h-6 text-white" />
+              <div className="px-4 py-3">
+                <div className="flex items-center justify-between bg-linear-to-r from-blue-600 to-blue-500 p-3 rounded-xl shadow-md">
+                  <Link href="/saldo" className="flex-1">
+                    <div className="text-left">
+                      <p className="text-[10px] text-blue-100 uppercase font-semibold tracking-wider">Saldo Anda</p>
+                      <p className="text-base font-bold text-white tracking-wide">
+                        {formatCurrency(saldo?.amount || 0)}
+                        <span className="text-[10px] ml-0.5 opacity-80">,00</span>
+                      </p>
                     </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-gray-900 text-sm font-semibold truncate">
-                      {getUserName()}
-                    </p>
-                    <p className="text-gray-600 text-xs truncate">
-                      {user.email}
-                    </p>
-                  </div>
+                  </Link>
+
+                  <button
+                    className="bg-white/20 hover:bg-white/30 p-2 rounded-lg text-white transition-all active:scale-95"
+                    onClick={(e) => {
+                      e.preventDefault(); // Mencegah Link ikut ter-klik
+                      setIsModalOpen(true);
+                    }}
+                  >
+                    <CirclePlus size={20} />
+                  </button>
                 </div>
               </div>
             )}
@@ -401,11 +486,15 @@ function Navbar() {
           </div>
         </div>
       )}
-      <PaymentModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        clientKey={process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || ''}
-      />
+
+      {/* Payment Modal - Hanya bisa dibuka jika user sudah login */}
+      {user && (
+        <PaymentModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          clientKey={process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || ''}
+        />
+      )}
     </nav>
   );
 }

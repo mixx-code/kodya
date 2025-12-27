@@ -7,6 +7,17 @@ import type { SupabaseClient } from '@/lib/supabase'
 import type { Json } from '@/types/supabase'
 import type { User, Session, Provider } from '@supabase/supabase-js'
 
+// Type untuk profile
+export interface Profile {
+    id: string
+    email: string | null
+    full_name: string | null
+    avatar_url: string | null
+    role: string | null
+    created_at: string | null
+    updated_at: string | null
+}
+
 // Hook untuk Supabase client (tanpa state)
 export function useSupabase(): SupabaseClient {
     return createClient()
@@ -80,6 +91,68 @@ export function useAuth() {
     return state
 }
 
+// Hook untuk mendapatkan profile user (termasuk role)
+export function useProfile() {
+    const [profile, setProfile] = useState<Profile | null>(null)
+    const [loading, setLoading] = useState<boolean>(true)
+    const [error, setError] = useState<Error | null>(null)
+    const { user } = useAuth()
+    const supabase = useSupabase()
+
+    useEffect(() => {
+        let mounted = true
+
+        const getProfile = async () => {
+            if (!user) {
+                if (mounted) {
+                    setProfile(null)
+                    setLoading(false)
+                }
+                return
+            }
+
+            try {
+                const { data, error } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', user.id)
+                    .single()
+
+                if (error) throw error
+
+                if (mounted) {
+                    setProfile(data)
+                    setLoading(false)
+                }
+            } catch (err) {
+                if (mounted) {
+                    setError(err instanceof Error ? err : new Error('Failed to fetch profile'))
+                    setLoading(false)
+                }
+            }
+        }
+
+        getProfile()
+
+        return () => {
+            mounted = false
+        }
+    }, [user, supabase])
+
+    return { profile, loading, error }
+}
+
+// Hook untuk mendapatkan role user
+export function useRole() {
+    const { profile, loading, error } = useProfile()
+
+    return {
+        role: profile?.role ?? null,
+        loading,
+        error
+    }
+}
+
 // Hook untuk OAuth (Google Login)
 export function useOAuth() {
     const [loading, setLoading] = useState<boolean>(false)
@@ -141,7 +214,6 @@ export function useOAuth() {
             setLoading(false)
         }
     }
-
 
     const signInWithGoogle = () => signInWithOAuth('google')
     const signUpWithGoogle = () => signUpWithOAuth('google')
@@ -365,4 +437,41 @@ export function useUpdateUser() {
     }
 
     return { updateUser, loading, error }
+}
+
+// Hook untuk update profile (termasuk role)
+export function useUpdateProfile() {
+    const [loading, setLoading] = useState<boolean>(false)
+    const [error, setError] = useState<Error | null>(null)
+    const { user } = useAuth()
+    const supabase = useSupabase()
+
+    const updateProfile = async (updates: Partial<Omit<Profile, 'id' | 'created_at'>>) => {
+        if (!user) {
+            throw new Error('No user logged in')
+        }
+
+        setLoading(true)
+        setError(null)
+
+        try {
+            const { error } = await supabase
+                .from('profiles')
+                .update({
+                    ...updates,
+                    updated_at: new Date().toISOString(),
+                })
+                .eq('id', user.id)
+
+            if (error) throw error
+        } catch (err) {
+            const error = err instanceof Error ? err : new Error('Profile update failed')
+            setError(error)
+            throw error
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    return { updateProfile, loading, error }
 }
