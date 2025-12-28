@@ -1,0 +1,38 @@
+services:
+  kodya:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    image: kodya-app:latest
+    container_name: kodya
+    restart: unless-stopped
+    env_file:
+      - .env.local  # Lebih praktis daripada menulis satu-satu jika file .env sudah lengkap
+    environment:
+      # Variabel tetap bisa didefinisikan ulang di sini jika perlu
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY: ${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${NEXT_PUBLIC_GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      NEXT_PUBLIC_MIDTRANS_CLIENT_KEY: ${NEXT_PUBLIC_MIDTRANS_CLIENT_KEY}
+      MIDTRANS_SERVER_KEY: ${MIDTRANS_SERVER_KEY}
+      MIDTRANS_CLIENT_KEY: ${MIDTRANS_CLIENT_KEY}
+      MIDTRANS_IS_PRODUCTION: ${MIDTRANS_IS_PRODUCTION}
+      # ... sisanya (Docker otomatis mengambil dari file .env lokal)
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app              # Hot Reloading (untuk development)
+      - /app/node_modules   # Jangan timpa node_modules kontainer dengan lokal
+      - /app/.next          # Cache build Next.js
+    networks:
+      - kodya-network
+
+volumes:
+  kodya_data: # Definisi volume jika ingin menyimpan data persisten
+
+networks:
+  kodya-network:
+    driver: bridge
