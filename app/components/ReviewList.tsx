@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { Star } from "lucide-react";
 import { createClient } from "@/lib/supabase-client";
+import { websocketService, ReviewData } from "@/lib/websocket";
 
 interface Review {
   id: string | null;
@@ -24,7 +25,79 @@ export function ReviewList({ productId, refreshTrigger }: ReviewListProps) {
   const [averageRating, setAverageRating] = useState(0);
 
   useEffect(() => {
+    console.log(` ReviewList useEffect triggered for product ${productId}`);
     fetchReviews();
+
+    // Join WebSocket room for this product
+    console.log(` Attempting to join WebSocket room for product ${productId}`);
+    websocketService.joinProductRoom(productId);
+
+    // Listen for real-time review updates
+    const handleReviewAdded = (data: { productId: number; review: ReviewData; timestamp: string }) => {
+      console.log(' New review received in real-time:', data);
+
+      if (data.productId === productId) {
+        console.log(' Review matches current product, updating UI');
+
+        // Add the new review to the beginning of the list
+        setReviews(prevReviews => {
+          const newReview: Review = {
+            id: data.review.id,
+            rating: data.review.rating,
+            comment: data.review.comment,
+            created_at: data.review.created_at,
+            user_id: data.review.user_id,
+            user_avatar: data.review.user_avatar
+          };
+
+          const updatedReviews = [newReview, ...prevReviews];
+          console.log(' Updated reviews list:', updatedReviews);
+
+          // Recalculate average rating
+          const validRatings = updatedReviews.filter(r => r.rating !== null);
+          if (validRatings.length > 0) {
+            const avg = validRatings.reduce((sum, review) => sum + (review.rating || 0), 0) / validRatings.length;
+            setAverageRating(Math.round(avg * 10) / 10);
+            console.log(' New average rating:', Math.round(avg * 10) / 10);
+          } else {
+            setAverageRating(0);
+          }
+
+          return updatedReviews;
+        });
+
+        // Show notification for new review
+        if (typeof window !== 'undefined' && 'Notification' in window) {
+          if (Notification.permission === 'granted') {
+            new Notification('Review Baru!', {
+              body: `${data.review.user_id?.charAt(0).toUpperCase() || 'User'} memberikan review ${data.review.rating} bintang`,
+              icon: '/favicon.ico'
+            });
+          } else if (Notification.permission !== 'denied') {
+            Notification.requestPermission().then(permission => {
+              if (permission === 'granted') {
+                new Notification('Review Baru!', {
+                  body: `${data.review.user_id?.charAt(0).toUpperCase() || 'User'} memberikan review ${data.review.rating} bintang`,
+                  icon: '/favicon.ico'
+                });
+              }
+            });
+          }
+        }
+      } else {
+        console.log(` Review for product ${data.productId} doesn't match current product ${productId}`);
+      }
+    };
+
+    console.log(' Registering review-added event listener');
+    websocketService.onReviewAdded(handleReviewAdded);
+
+    // Cleanup
+    return () => {
+      console.log(` Cleaning up WebSocket room for product ${productId}`);
+      websocketService.leaveProductRoom(productId);
+      websocketService.offReviewAdded(handleReviewAdded);
+    };
   }, [productId, refreshTrigger]);
 
   const fetchReviews = async () => {

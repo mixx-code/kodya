@@ -6,6 +6,7 @@ import Image from "next/image";
 import { createClient } from "@/lib/supabase-client";
 import { Loader2, Edit, Trash2, Eye, Plus, Search, Filter } from "lucide-react";
 import { useDebounce } from "@/hooks/useDebounce";
+import { websocketService, ProductData } from "@/lib/websocket";
 
 interface Product {
   id: number;
@@ -36,7 +37,116 @@ export default function ProductsListPage() {
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log('🔄 AdminProductsPage useEffect triggered');
     fetchProducts();
+
+    // Join WebSocket room for products
+    console.log('📡 Attempting to join WebSocket products room');
+    websocketService.joinProductsRoom();
+
+    // Listen for real-time product updates
+    const handleProductAdded = (data: { product: ProductData; timestamp: string }) => {
+      console.log('🎉 New product received in real-time:', data);
+
+      // Add the new product to the beginning of the list
+      setProducts(prevProducts => {
+        const newProduct: Product = {
+          id: data.product.id,
+          title: data.product.title,
+          description: data.product.description,
+          category: data.product.category,
+          price: data.product.price,
+          demo_url: data.product.demo_url,
+          link_program: data.product.link_program,
+          images: data.product.images,
+          tech_stack: data.product.tech_stack || [],
+          features: data.product.features || [],
+          rating: data.product.rating,
+          reviews: data.product.reviews,
+          sales: data.product.sales,
+          created_at: data.product.created_at,
+          updated_at: data.product.updated_at
+        };
+
+        const updatedProducts = [newProduct, ...prevProducts];
+        console.log('📝 Updated products list:', updatedProducts);
+
+        // Update categories if new category
+        if (data.product.category && !categories.includes(data.product.category)) {
+          setCategories(prev => [...prev, data.product.category!]);
+        }
+
+        return updatedProducts;
+      });
+
+      // Show notification for new product
+      if (typeof window !== 'undefined' && 'Notification' in window) {
+        if (Notification.permission === 'granted') {
+          new Notification('Produk Baru!', {
+            body: `${data.product.title} telah ditambahkan`,
+            icon: '/favicon.ico'
+          });
+        } else if (Notification.permission !== 'denied') {
+          Notification.requestPermission().then(permission => {
+            if (permission === 'granted') {
+              new Notification('Produk Baru!', {
+                body: `${data.product.title} telah ditambahkan`,
+                icon: '/favicon.ico'
+              });
+            }
+          });
+        }
+      }
+    };
+
+    const handleProductUpdated = (data: { product: ProductData; timestamp: string }) => {
+      console.log('🔄 Product updated in real-time:', data);
+
+      // Update the product in the list
+      setProducts(prevProducts =>
+        prevProducts.map(product =>
+          product.id === data.product.id
+            ? {
+              ...product,
+              title: data.product.title,
+              description: data.product.description,
+              category: data.product.category,
+              price: data.product.price,
+              demo_url: data.product.demo_url,
+              link_program: data.product.link_program,
+              images: data.product.images,
+              tech_stack: data.product.tech_stack || [],
+              features: data.product.features || [],
+              rating: data.product.rating,
+              reviews: data.product.reviews,
+              sales: data.product.sales,
+              updated_at: data.product.updated_at
+            }
+            : product
+        )
+      );
+    };
+
+    const handleProductDeleted = (data: { productId: number; timestamp: string }) => {
+      console.log('🗑️ Product deleted in real-time:', data);
+
+      // Remove the product from the list
+      setProducts(prevProducts => prevProducts.filter(product => product.id !== data.productId));
+    };
+
+    console.log('👂 Registering product event listeners');
+    websocketService.onProductAdded(handleProductAdded);
+    websocketService.onProductUpdated(handleProductUpdated);
+    websocketService.onProductDeleted(handleProductDeleted);
+
+    // Cleanup
+    return () => {
+      console.log('🧹 Cleaning up WebSocket products room');
+      websocketService.leaveProductsRoom();
+      websocketService.offProductAdded(handleProductAdded);
+      websocketService.offProductUpdated(handleProductUpdated);
+      websocketService.offProductDeleted(handleProductDeleted);
+    };
   }, []);
 
   const fetchProducts = async () => {
@@ -166,6 +276,51 @@ export default function ProductsListPage() {
               <Plus className="w-4 h-4" />
               Tambah Produk
             </Link>
+          </div>
+
+          {/* Debug Test Button */}
+          <div className="p-4 rounded-lg border mb-6" style={{
+            backgroundColor: 'var(--card-background)',
+            borderColor: 'var(--card-border)'
+          }}>
+            <button
+              onClick={() => {
+                console.log('🧪 Testing WebSocket products connection...');
+                console.log('📊 WebSocket connected:', websocketService.isConnected());
+
+                // Test with mock product data
+                const testProduct = {
+                  id: 999,
+                  title: 'Test Product Real-Time',
+                  description: 'Ini adalah produk test real-time!',
+                  category: 'Test',
+                  price: '100000',
+                  demo_url: null,
+                  link_program: null,
+                  images: null,
+                  tech_stack: ['Test'],
+                  features: ['Feature test'],
+                  rating: 5,
+                  reviews: 1,
+                  sales: 0,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString()
+                };
+
+                console.log('📤 Sending test product:', testProduct);
+                websocketService.notifyNewProduct(testProduct);
+              }}
+              className="px-4 py-2 rounded-lg font-medium transition-colors mr-4"
+              style={{
+                backgroundColor: 'var(--accent)',
+                color: 'var(--text-inverse)'
+              }}
+            >
+              🧪 Test Real-Time Product
+            </button>
+            <span className="text-sm" style={{ color: 'var(--text-muted)' }}>
+              Klik untuk testing WebSocket real-time product updates
+            </span>
           </div>
 
           {/* Search and Filter */}

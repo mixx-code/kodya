@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Editor from "./Editor";
 import { createProduct } from "./actions";
+import { websocketService } from "@/lib/websocket";
 
 export default function CreateProductPage() {
     const router = useRouter();
@@ -32,6 +33,39 @@ export default function CreateProductPage() {
         setDisplayPrice(value ? formatted : "");
     };
 
+    const handleSubmit = async (formData: FormData) => {
+        setError(null);
+        setSuccess(false);
+
+        startTransition(async () => {
+            try {
+                // Create product using server action
+                const createdProduct = await createProduct(formData);
+
+                console.log('✅ Product created successfully:', createdProduct);
+
+                // Send WebSocket notification directly from client
+                if (createdProduct && websocketService.isConnected()) {
+                    console.log('📢 Sending WebSocket notification for new product');
+                    websocketService.notifyNewProduct(createdProduct);
+                } else {
+                    console.log('❌ WebSocket not connected, skipping notification');
+                }
+
+                // Show success message
+                setSuccess(true);
+
+                // Redirect after delay
+                setTimeout(() => {
+                    router.push('/products');
+                }, 2000);
+
+            } catch (err: any) {
+                setError(err.message || 'Terjadi kesalahan saat membuat produk');
+            }
+        });
+    };
+
     return (
         <div className="max-w-4xl mx-auto my-12 p-10 border rounded-3xl" style={{ backgroundColor: 'var(--card-background)', borderColor: 'var(--card-border)', boxShadow: 'var(--card-shadow)' }} suppressHydrationWarning>
             <header className="mb-10 border-b pb-6" style={{ borderColor: 'var(--border-muted)' }}>
@@ -51,7 +85,11 @@ export default function CreateProductPage() {
                 </div>
             )}
 
-            <form action={createProduct} className="space-y-8">
+            <form onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                handleSubmit(formData);
+            }} className="space-y-8">
                 {/* Judul Produk */}
                 <div className="space-y-2">
                     <label className="text-sm font-bold uppercase tracking-wider" style={{ color: 'var(--text-primary)' }}>Judul Produk *</label>

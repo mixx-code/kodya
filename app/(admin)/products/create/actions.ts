@@ -11,7 +11,7 @@ type ActionResult = {
     productId?: number;
 }
 
-export async function createProduct(formData: FormData): Promise<void> {
+export async function createProduct(formData: FormData): Promise<any> {
     try {
         const supabase = await getSupabaseServerClient();
         const BUCKET_NAME = 'images-kodya';
@@ -98,15 +98,38 @@ export async function createProduct(formData: FormData): Promise<void> {
             throw new Error(`Gagal menyimpan produk: ${insertError.message}`);
         }
 
-        // 5. Revalidasi cache dan redirect
+        // 5. Send WebSocket notification
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/websocket`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    product: insertedData,
+                    action: 'created'
+                })
+            });
+
+            if (!response.ok) {
+                console.error('Failed to send WebSocket notification:', response.statusText);
+            } else {
+                console.log('✅ WebSocket notification sent for new product');
+            }
+        } catch (wsError) {
+            console.error('WebSocket notification error:', wsError);
+            // Don't throw error, just log it
+        }
+
+        // 6. Revalidasi cache
         revalidatePath("/products");
         revalidatePath("/");
 
-        // Redirect ke products page
-        redirect("/products");
+        // Return the created product data instead of redirecting
+        return insertedData;
 
     } catch (error) {
-        // Re-throw error untuk ditangkap oleh Next.js error boundary
+        // Re-throw error untuk ditangkap oleh client
         throw error;
     }
 }

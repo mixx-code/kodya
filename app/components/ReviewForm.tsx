@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Star } from "lucide-react";
 import { createClient } from "@/lib/supabase-client";
+import { websocketService } from "@/lib/websocket";
 
 interface ReviewFormProps {
   orderId: string;
@@ -75,6 +76,27 @@ export function ReviewForm({ orderId, productId, onReviewSubmitted }: ReviewForm
         });
         alert(`Gagal mengirim review: ${error.message || 'Unknown error'}`);
       } else {
+        // Send real-time notification via WebSocket
+        if (data && data.length > 0) {
+          const newReview = data[0];
+
+          // Fetch user data for the review
+          const { data: userData } = await supabase.auth.getUser();
+
+          const reviewWithUser = {
+            id: newReview.id,
+            rating: newReview.rating,
+            comment: newReview.comment,
+            created_at: newReview.created_at || new Date().toISOString(),
+            user_id: userData.user?.id || '',
+            user_avatar: userData.user?.user_metadata?.avatar_url || null,
+            product_id: productId
+          };
+
+          // Notify other clients about the new review
+          websocketService.notifyNewReview(productId, reviewWithUser);
+        }
+
         alert('Review berhasil dikirim!');
         setRating(0);
         setComment("");
