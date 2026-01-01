@@ -16,7 +16,8 @@ const Editor = ({ value, onChange }: EditorProps) => {
         editorProps: {
             attributes: {
                 class:
-                    "min-h-[150px] w-full rounded-md border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 prose prose-sm max-w-none",
+                    "min-h-[150px] w-full rounded-md border px-4 py-2 prose prose-sm max-w-none outline-none transition-all",
+                style: "border-color: var(--border-secondary); background-color: var(--card-background); color: var(--text-primary);"
             },
         },
         onUpdate: ({ editor }) => {
@@ -27,36 +28,48 @@ const Editor = ({ value, onChange }: EditorProps) => {
     if (!editor) return null;
 
     return (
-        <div className="border border-slate-300 rounded-lg overflow-hidden">
+        <div className="border rounded-lg overflow-hidden" style={{ borderColor: 'var(--border-secondary)' }}>
             {/* Toolbar */}
-            <div className="bg-slate-50 border-b border-slate-300 p-2 flex gap-2 flex-wrap">
+            <div className="p-2 flex gap-2 flex-wrap border-b" style={{ backgroundColor: 'var(--border-muted)', borderColor: 'var(--border-secondary)' }}>
                 <button
                     type="button"
                     onClick={() => editor.chain().focus().toggleBold().run()}
-                    className={`p-1 px-3 rounded border transition ${editor.isActive("bold")
-                        ? "bg-slate-900 text-white"
-                        : "bg-white text-slate-900 hover:bg-slate-100"
-                        }`}
+                    className={`p-1 px-3 rounded border transition`}
+                    style={{
+                        backgroundColor: editor.isActive("bold") ? 'var(--text-primary)' : 'var(--card-background)',
+                        color: editor.isActive("bold") ? 'var(--text-inverse)' : 'var(--text-primary)',
+                        borderColor: 'var(--border-secondary)'
+                    }}
+                    onMouseEnter={(e) => !editor.isActive("bold") && (e.currentTarget.style.backgroundColor = 'var(--border-muted)')}
+                    onMouseLeave={(e) => !editor.isActive("bold") && (e.currentTarget.style.backgroundColor = 'var(--card-background)')}
                 >
                     <b>B</b>
                 </button>
                 <button
                     type="button"
                     onClick={() => editor.chain().focus().toggleItalic().run()}
-                    className={`p-1 px-3 rounded border transition ${editor.isActive("italic")
-                        ? "bg-slate-900 text-white"
-                        : "bg-white text-slate-900 hover:bg-slate-100"
-                        }`}
+                    className={`p-1 px-3 rounded border transition`}
+                    style={{
+                        backgroundColor: editor.isActive("italic") ? 'var(--text-primary)' : 'var(--card-background)',
+                        color: editor.isActive("italic") ? 'var(--text-inverse)' : 'var(--text-primary)',
+                        borderColor: 'var(--border-secondary)'
+                    }}
+                    onMouseEnter={(e) => !editor.isActive("italic") && (e.currentTarget.style.backgroundColor = 'var(--border-muted)')}
+                    onMouseLeave={(e) => !editor.isActive("italic") && (e.currentTarget.style.backgroundColor = 'var(--card-background)')}
                 >
                     <i>I</i>
                 </button>
                 <button
                     type="button"
                     onClick={() => editor.chain().focus().toggleBulletList().run()}
-                    className={`p-1 px-3 rounded border transition ${editor.isActive("bulletList")
-                        ? "bg-slate-900 text-white"
-                        : "bg-white text-slate-900 hover:bg-slate-100"
-                        }`}
+                    className={`p-1 px-3 rounded border transition`}
+                    style={{
+                        backgroundColor: editor.isActive("bulletList") ? 'var(--text-primary)' : 'var(--card-background)',
+                        color: editor.isActive("bulletList") ? 'var(--text-inverse)' : 'var(--text-primary)',
+                        borderColor: 'var(--border-secondary)'
+                    }}
+                    onMouseEnter={(e) => !editor.isActive("bulletList") && (e.currentTarget.style.backgroundColor = 'var(--border-muted)')}
+                    onMouseLeave={(e) => !editor.isActive("bulletList") && (e.currentTarget.style.backgroundColor = 'var(--card-background)')}
                 >
                     • Bullet
                 </button>
@@ -65,10 +78,14 @@ const Editor = ({ value, onChange }: EditorProps) => {
                 <button
                     type="button"
                     onClick={() => editor.chain().focus().toggleOrderedList().run()}
-                    className={`p-1 px-3 rounded border transition ${editor.isActive("orderedList")
-                        ? "bg-slate-900 text-white"
-                        : "bg-white text-slate-900 hover:bg-slate-100"
-                        }`}
+                    className={`p-1 px-3 rounded border transition`}
+                    style={{
+                        backgroundColor: editor.isActive("orderedList") ? 'var(--text-primary)' : 'var(--card-background)',
+                        color: editor.isActive("orderedList") ? 'var(--text-inverse)' : 'var(--text-primary)',
+                        borderColor: 'var(--border-secondary)'
+                    }}
+                    onMouseEnter={(e) => !editor.isActive("orderedList") && (e.currentTarget.style.backgroundColor = 'var(--border-muted)')}
+                    onMouseLeave={(e) => !editor.isActive("orderedList") && (e.currentTarget.style.backgroundColor = 'var(--card-background)')}
                 >
                     1. Number
                 </button>

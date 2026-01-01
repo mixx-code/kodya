@@ -8,6 +8,7 @@ import { getUniqueCategories } from "./(customer)/product/actions/categories";
 export default async function Home() {
   // Ambil data awal (6 produk pertama)
   const { data: initialProducts, nextCursor } = await fetchProductsCursor(undefined, 6);
+  console.log('Data Products:', initialProducts);
   const categories = await getUniqueCategories();
   return (
     <>

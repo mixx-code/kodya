@@ -2,17 +2,19 @@
 import ProductDetail from "@/app/components/productDetail";
 import { notFound } from "next/navigation";
 import { getProductById } from "../actions/product";
+import NotFound from "@/app/not-found";
 
 export default async function ProductPage({ params }: { params: { id: string } }) {
     const { id } = await params; // Next.js 15 mewajibkan await params
     const productId = parseInt(id);
 
-    if (isNaN(productId)) notFound();
+    // if (isNaN(productId)) notFound();
 
     const product = await getProductById(productId);
 
     if (!product) {
-        notFound(); // Akan menampilkan 404 jika ID tidak ada di DB
+        // notFound(); // Ini akan langsung mengarahkan ke file not-found.tsx di atas
+        return <NotFound />;
     }
 
     return (

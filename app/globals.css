@@ -1,34 +1,131 @@
 @import "tailwindcss";
 
 :root {
-  /* Default: Light Mode (Biru & Putih) */
-  --background: #f0f7ff;
-  /* Putih kebiruan segar */
-  --foreground: #1e3a8a;
-  /* Biru Navy (teks) */
-  --primary: #3b82f6;
-  /* Biru Utama */
+    /* Default: Pastel Light Mode (Misty Blue Theme) */
+    --background: #dbeafe; /* Biru pastel yang jelas, bukan putih */
+    --foreground: #1e293b; /* Slate gelap untuk kontras tinggi */
+    --primary: #60a5fa;
+
+    /* Navbar Variables (New) */
+    --navbar-background: #ffffff; /* Navbar putih bersih agar kontras dengan bg */
+    --navbar-foreground: #1e293b;
+
+    /* Card Variables */
+    --card-background: #f8fafc; /* Sedikit lebih terang dari background utama */
+    --card-foreground: #334155;
+    --card-border: #cbd5e1;
+    --card-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+
+    /* Text Variables */
+    --text-primary: #0f172a; /* Kontras maksimal */
+    --text-secondary: #475569;
+    --text-muted: #64748b;
+    --text-inverse: #ffffff;
+
+    /* Icon Variables */
+    --icon-primary: #334155;
+    --icon-secondary: #64748b;
+    --icon-muted: #94a3b8;
+    --icon-inverse: #ffffff;
+
+    /* Border Variables */
+    --border-primary: #cbd5e1;
+    --border-secondary: #94a3b8;
+    --border-accent: #3b82f6;
+    --border-muted: #e2e8f0;
+
+    /* Accent Colors (Pastel) */
+    --accent: #818cf8; /* Soft Indigo */
+    --accent-hover: #6366f1;
+    --accent-muted: #c7d2fe;
+
+    /* Status Colors (Pastel High Contrast) */
+    --success: #34d399; /* Emerald Pastel */
+    --warning: #fbbf24; /* Amber Pastel */
+    --error: #f87171;   /* Rose Pastel */
+    --info: #22d3ee;    /* Cyan Pastel */
 }
 
-/* Selector ini memungkinkan kita memaksa dark mode dengan menambah class="dark" di <html> */
+/* Dark Mode: Deep Pastel */
 .dark {
-  --background: #0f172a;
-  /* Navy sangat gelap */
-  --foreground: #e2e8f0;
-  /* Teks abu terang */
-  --primary: #60a5fa;
-  /* Biru lebih terang */
+    --background: #0f172a;
+    --foreground: #f1f5f9;
+    --primary: #3b82f6;
+
+    /* Navbar Variables (Dark) */
+    --navbar-background: #1e293b;
+    --navbar-foreground: #f1f5f9;
+
+    /* Card Variables */
+    --card-background: #1e293b;
+    --card-foreground: #f8fafc;
+    --card-border: #334155;
+    --card-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.3);
+
+    /* Text Variables */
+    --text-primary: #f8fafc;
+    --text-secondary: #cbd5e1;
+    --text-muted: #94a3b8;
+    --text-inverse: #0f172a;
+
+    /* Icon Variables */
+    --icon-primary: #f1f5f9;
+    --icon-secondary: #94a3b8;
+    --icon-muted: #475569;
+    --icon-inverse: #0f172a;
+
+    /* Border Variables */
+    --border-primary: #334155;
+    --border-secondary: #475569;
+    --border-accent: #60a5fa;
+    --border-muted: #1e293b;
+
+    /* Accent Colors */
+    --accent: #818cf8;
+    --accent-hover: #a5b4fc;
+    --accent-muted: #312e81;
+
+    /* Status Colors */
+    --success: #10b981;
+    --warning: #f59e0b;
+    --error: #ef4444;
+    --info: #06b6d4;
 }
 
 @layer base {
-  :root {
-    --color-background: var(--background);
-    --color-foreground: var(--foreground);
-    --color-primary: var(--primary);
-  }
+    :root {
+        --color-background: var(--background);
+        --color-foreground: var(--foreground);
+        --color-primary: var(--primary);
+        --color-navbar-background: var(--navbar-background);
+        --color-navbar-foreground: var(--navbar-foreground);
+        --color-card-background: var(--card-background);
+        --color-card-foreground: var(--card-foreground);
+        --color-card-border: var(--card-border);
+        --color-text-primary: var(--text-primary);
+        --color-text-secondary: var(--text-secondary);
+        --color-text-muted: var(--text-muted);
+        --color-text-inverse: var(--text-inverse);
+        --color-icon-primary: var(--icon-primary);
+        --color-icon-secondary: var(--icon-secondary);
+        --color-icon-muted: var(--icon-muted);
+        --color-icon-inverse: var(--icon-inverse);
+        --color-border-primary: var(--border-primary);
+        --color-border-secondary: var(--border-secondary);
+        --color-border-accent: var(--border-accent);
+        --color-border-muted: var(--border-muted);
+        --color-accent: var(--accent);
+        --color-accent-hover: var(--accent-hover);
+        --color-accent-muted: var(--accent-muted);
+        --color-success: var(--success);
+        --color-warning: var(--warning);
+        --color-error: var(--error);
+        --color-info: var(--info);
+    }
 }
 
 body {
-  background-color: var(--background);
-  color: var(--foreground);
+    background-color: var(--background);
+    color: var(--foreground);
+    transition: background-color 0.3s ease, color 0.3s ease;
 }

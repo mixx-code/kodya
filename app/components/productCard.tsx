@@ -1,18 +1,22 @@
+// app\components\productCard.tsx
 "use client";
 import Image from "next/image";
 import Link from "next/link";
-import { ShoppingCart, Eye, Star } from "lucide-react";
-import { useState } from "react";
+import { ShoppingCart, Star, Check } from "lucide-react";
+import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase-client";
+import { useDarkMode } from "../contexts/DarkModeContext";
 
 interface ProductCardProps {
     id: number;
     title: string;
     description: string;
     price: string;
-    image: string[]; // Menerima array atau string
+    image: string[];
     category: string;
     rating?: number;
     sales?: number;
+    order_count?: number; // New field from order_items aggregation
 }
 
 export function ProductCard({
@@ -20,18 +24,33 @@ export function ProductCard({
     title,
     description,
     price,
-    image, // Ini adalah data images dari DB
+    image,
     category,
     rating = 5,
     sales = 0,
+    order_count = 0, // Use order_count from database
 }: ProductCardProps) {
-    // Ambil gambar pertama dari array, jika tidak ada gunakan placeholder
-    console.log(image);
+    const supabase = createClient();
+    const { isDarkMode } = useDarkMode();
+
     const initialSrc = Array.isArray(image) && image.length > 0
         ? image[0]
         : (typeof image === 'string' ? image : "https://placehold.co/600x400?text=No+Image");
 
     const [imgSrc, setImgSrc] = useState(initialSrc);
+    const [isInCart, setIsInCart] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    useEffect(() => {
+        if (mounted) {
+            checkIfInCart();
+        }
+    }, [id, mounted]);
 
     // Format Rupiah untuk Price
     const formattedPrice = new Intl.NumberFormat("id-ID", {
@@ -40,61 +59,199 @@ export function ProductCard({
         minimumFractionDigits: 0,
     }).format(Number(price));
 
+    const checkIfInCart = async () => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+
+            if (!user) return;
+
+            const { data, error } = await supabase
+                .from('cart')
+                .select('id')
+                .eq('user_id', user.id)
+                .eq('product_id', id)
+                .maybeSingle();
+
+            if (error) {
+                console.error('Error checking cart:', error);
+                return;
+            }
+
+            setIsInCart(!!data);
+        } catch (error) {
+            console.error('Error checking cart:', error);
+        }
+    };
+
+    const handleAddToCart = async (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        setIsLoading(true);
+
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+
+            if (!user) {
+                alert('Silakan login terlebih dahulu');
+                setIsLoading(false);
+                return;
+            }
+
+            // Check if already in cart
+            const { data: existingCart } = await supabase
+                .from('cart')
+                .select('id, quantity')
+                .eq('user_id', user.id)
+                .eq('product_id', id)
+                .maybeSingle();
+
+            if (existingCart) {
+                // Update quantity if already in cart
+                const { error: updateError } = await supabase
+                    .from('cart')
+                    .update({
+                        quantity: existingCart.quantity + 1,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', existingCart.id);
+
+                if (updateError) {
+                    console.error('Error updating cart:', updateError);
+                    alert('Gagal menambah quantity');
+                    setIsLoading(false);
+                    return;
+                }
+
+                alert('Quantity produk di cart berhasil ditambah!');
+            } else {
+                // Insert new cart item
+                const { error: insertError } = await supabase
+                    .from('cart')
+                    .insert({
+                        user_id: user.id,
+                        product_id: id,
+                        quantity: 1
+                    });
+
+                if (insertError) {
+                    console.error('Error adding to cart:', insertError);
+                    alert('Gagal menambahkan ke keranjang');
+                    setIsLoading(false);
+                    return;
+                }
+
+                alert('Produk berhasil ditambahkan ke keranjang!');
+                setIsInCart(true);
+            }
+
+        } catch (error) {
+            console.error('Error adding to cart:', error);
+            alert('Terjadi kesalahan');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     return (
         <Link href={`/product/${id}`} className="block h-full">
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-xl transition-all duration-300 group cursor-pointer h-full flex flex-col">
+            <div className="rounded-xl border overflow-hidden transition-all duration-300 group cursor-pointer h-full flex flex-col hover:shadow-2xl"
+                style={{
+                    backgroundColor: 'var(--card-background)',
+                    borderColor: 'var(--card-border)',
+                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)'
+                }}
+                onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 25px 50px -12px rgb(0 0 0 / 0.25), 0 8px 16px -8px rgb(0 0 0 / 0.2)';
+                }}
+                onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)';
+                }}>
                 {/* Image */}
-                <div className="relative h-48 md:h-56 bg-gray-100 overflow-hidden flex-shrink-0">
+                <div className="relative h-48 md:h-56 overflow-hidden flex-shrink-0" style={{ backgroundColor: 'var(--border-muted)' }}>
                     <Image
                         src={imgSrc}
                         alt={title}
                         fill
                         className="object-cover group-hover:scale-110 transition-transform duration-300"
-                        // Jika gambar gagal load (404), ganti ke placeholder
                         onError={() => setImgSrc("https://placehold.co/600x400?text=Image+Not+Found")}
-                        unoptimized // Tambahkan ini jika menggunakan Supabase agar tidak memotong kuota optimization Next.js
+                        unoptimized
                     />
 
                     <div className="absolute top-3 left-3">
-                        <span className="bg-blue-600 text-white text-xs font-semibold px-3 py-1 rounded-full uppercase">
+                        <span className="text-xs font-semibold px-3 py-1 rounded-full uppercase" style={{ backgroundColor: 'var(--accent)', color: 'var(--text-inverse)' }}>
                             {category}
                         </span>
                     </div>
+
+                    {/* Badge if in cart */}
+                    {mounted && isInCart && (
+                        <div className="absolute top-3 right-3">
+                            <span className="text-xs font-semibold px-2 py-1 rounded-full flex items-center gap-1" style={{ backgroundColor: 'var(--success)', color: 'var(--text-inverse)' }}>
+                                <Check className="w-3 h-3" />
+                                Di Cart
+                            </span>
+                        </div>
+                    )}
                 </div>
 
                 {/* Content */}
                 <div className="p-4 flex flex-col flex-grow">
-                    <h3 className="font-bold text-lg text-gray-800 mb-2 line-clamp-1 group-hover:text-blue-600 transition-colors">
+                    <h3 className="font-bold text-lg mb-2 line-clamp-1 transition-colors" style={{ color: 'var(--text-primary)' }}>
                         {title}
                     </h3>
 
-                    {/* Render HTML description secara aman atau gunakan text saja */}
                     <div
-                        className="text-sm text-gray-600 mb-3 line-clamp-2"
+                        className="text-sm mb-3 line-clamp-2"
+                        style={{ color: 'var(--text-secondary)' }}
                         dangerouslySetInnerHTML={{ __html: description }}
                     />
 
                     <div className="flex items-center gap-3 mb-3">
                         <div className="flex items-center gap-1">
                             <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                            <span className="text-sm font-medium text-gray-700">{rating}</span>
+                            <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{rating}</span>
                         </div>
-                        <span className="text-xs text-gray-500">|</span>
-                        <span className="text-xs text-gray-500">{sales} terjual</span>
+                        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>|</span>
+                        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{order_count} terjual</span>
                     </div>
 
-                    <div className="flex items-center justify-between pt-3 border-t border-gray-100 mt-auto">
+                    <div className="flex items-center justify-between pt-3 mt-auto" style={{ borderTop: '1px solid var(--border-muted)' }}>
                         <div>
-                            <p className="text-xl font-bold text-blue-600">{formattedPrice}</p>
+                            <p className="text-xl font-bold" style={{ color: 'var(--accent)' }}>{formattedPrice}</p>
                         </div>
                         <button
-                            onClick={(e) => {
-                                e.preventDefault();
-                                console.log("Add to cart:", id);
+                            onClick={handleAddToCart}
+                            disabled={isLoading}
+                            className={`
+                                p-2 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed
+                                ${isLoading ? 'animate-pulse' : 'hover:scale-110 transform'}
+                            `}
+                            style={{
+                                backgroundColor: mounted ? (mounted && isInCart ? 'var(--success)' : 'var(--accent)') : 'var(--accent)',
+                                color: 'var(--text-inverse)',
+                                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)'
                             }}
-                            className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-lg transition-colors shadow-md"
+                            onMouseEnter={(e) => {
+                                if (!isLoading && mounted) {
+                                    e.currentTarget.style.boxShadow = '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)';
+                                    e.currentTarget.style.backgroundColor = mounted && isInCart ? 'var(--success)' : 'var(--accent-hover)';
+                                }
+                            }}
+                            onMouseLeave={(e) => {
+                                if (!isLoading && mounted) {
+                                    e.currentTarget.style.boxShadow = '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)';
+                                    e.currentTarget.style.backgroundColor = mounted && isInCart ? 'var(--success)' : 'var(--accent)';
+                                }
+                            }}
                         >
-                            <ShoppingCart className="w-5 h-5" />
+                            {isLoading ? (
+                                <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--text-inverse)', borderTopColor: 'transparent' }} />
+                            ) : mounted && isInCart ? (
+                                <Check className="w-5 h-5" style={{ filter: 'drop-shadow(0 1px 1px rgb(0 0 0 / 0.3))' }} />
+                            ) : (
+                                <ShoppingCart className="w-5 h-5" style={{ filter: 'drop-shadow(0 1px 1px rgb(0 0 0 / 0.3))' }} />
+                            )}
                         </button>
                     </div>
                 </div>

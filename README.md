@@ -64,3 +64,106 @@ kodya
 └─ tsconfig.json
 
 ```
+```
+kodya
+├─ app
+│  ├─ (admin)
+│  │  ├─ dashboard
+│  │  │  ├─ actions
+│  │  │  │  └─ admin.ts
+│  │  │  └─ page.tsx
+│  │  ├─ layout.tsx
+│  │  └─ products
+│  │     └─ create
+│  │        ├─ actions.ts
+│  │        ├─ Editor.tsx
+│  │        └─ page.tsx
+│  ├─ (customer)
+│  │  ├─ cart
+│  │  │  └─ page.tsx
+│  │  ├─ checkout
+│  │  │  └─ page.tsx
+│  │  ├─ product
+│  │  │  ├─ actions
+│  │  │  │  ├─ categories.ts
+│  │  │  │  └─ product.ts
+│  │  │  ├─ category
+│  │  │  │  ├─ products.ts
+│  │  │  │  └─ [category]
+│  │  │  │     ├─ CategoryClientContent.tsx
+│  │  │  │     └─ page.tsx
+│  │  │  └─ [id]
+│  │  │     └─ page.tsx
+│  │  └─ saldo
+│  │     └─ page.tsx
+│  ├─ actions.ts
+│  ├─ api
+│  │  └─ payment
+│  │     ├─ mark-opened
+│  │     │  └─ route.ts
+│  │     ├─ notification
+│  │     │  └─ route.ts
+│  │     ├─ regenerate
+│  │     │  └─ route.ts
+│  │     ├─ route.ts
+│  │     └─ webhook
+│  │        └─ route.ts
+│  ├─ auth
+│  │  ├─ callback
+│  │  │  └─ route.ts
+│  │  ├─ login
+│  │  │  └─ page.tsx
+│  │  └─ register
+│  │     └─ page.tsx
+│  ├─ components
+│  │  ├─ categorySection.tsx
+│  │  ├─ heroSection.tsx
+│  │  ├─ layoutBeranda.tsx
+│  │  ├─ navbar.tsx
+│  │  ├─ paymentModal.tsx
+│  │  ├─ productCard.tsx
+│  │  ├─ productDetail.tsx
+│  │  ├─ ProductListClient.tsx
+│  │  └─ showWindow.tsx
+│  ├─ favicon.ico
+│  ├─ globals.css
+│  ├─ landing
+│  │  ├─ page.tsx
+│  │  └─ [id]
+│  │     └─ page.tsx
+│  ├─ layout.tsx
+│  ├─ middleware.ts
+│  └─ page.tsx
+├─ docker-compose.yaml
+├─ Dockerfile
+├─ eslint.config.mjs
+├─ hooks
+│  └─ useSupabase.ts
+├─ lib
+│  ├─ supabase-client.ts
+│  ├─ supabase-server.ts
+│  └─ supabase.ts
+├─ next.config.ts
+├─ package-lock.json
+├─ package.json
+├─ postcss.config.mjs
+├─ public
+│  ├─ file.svg
+│  ├─ globe.svg
+│  ├─ logo.png
+│  ├─ next.svg
+│  ├─ product-1.jpg
+│  ├─ product-2.jpg
+│  ├─ vercel.svg
+│  └─ window.svg
+├─ README.md
+├─ supabase
+│  ├─ .temp
+│  │  └─ cli-latest
+│  └─ config.toml
+├─ tsconfig.json
+└─ types
+   ├─ midtrans.d.ts
+   └─ supabase.ts
+
+```

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Code, Smartphone, Database, Layers, Zap, FileCode, Box, LayoutGrid } from "lucide-react";
+import { useDarkMode } from "../contexts/DarkModeContext";
 
 // Helper untuk mapping icon berdasarkan nama kategori
 const getIcon = (name: string) => {
@@ -37,13 +38,14 @@ interface CategorySectionProps {
 
 function CategorySection({ initialCategories }: CategorySectionProps) {
     const [activeCategory, setActiveCategory] = useState<number | null>(null);
+    const { isDarkMode } = useDarkMode();
 
     return (
         <section className="w-full py-6 md:py-8">
-            <div className="bg-white rounded-xl md:rounded-2xl shadow-lg p-4 md:p-6">
+            <div className="rounded-xl md:rounded-2xl shadow-lg p-4 md:p-6 border" style={{ backgroundColor: 'var(--card-background)', color: 'var(--card-foreground)', borderColor: 'var(--card-border)' }}>
                 <div className="mb-4 md:mb-6">
-                    <h2 className="text-xl md:text-2xl font-bold text-gray-800">Kategori Produk</h2>
-                    <p className="text-sm md:text-base text-gray-600 mt-1">
+                    <h2 className="text-xl md:text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Kategori Produk</h2>
+                    <p className="text-sm md:text-base mt-1" style={{ color: 'var(--text-secondary)' }}>
                         Temukan {initialCategories.length} kategori teknologi terbaru
                     </p>
                 </div>
@@ -56,17 +58,22 @@ function CategorySection({ initialCategories }: CategorySectionProps) {
                             href={`/product/category/${category.slug}`}
                             onClick={() => setActiveCategory(category.id)}
                             className={`flex flex-col items-center justify-center min-w-[100px] md:min-w-0 p-4 rounded-xl border-2 transition-all ${activeCategory === category.id
-                                    ? "border-blue-500 bg-blue-50 shadow-md"
-                                    : "border-gray-100 bg-white hover:border-blue-200"
+                                ? "shadow-md"
+                                : ""
                                 }`}
+                            style={{
+                                backgroundColor: activeCategory === category.id ? 'var(--accent-muted)' : 'var(--card-background)',
+                                borderColor: activeCategory === category.id ? 'var(--accent)' : 'var(--border-primary)',
+                                color: 'var(--card-foreground)'
+                            }}
                         >
-                            <div className={`mb-2 ${activeCategory === category.id ? "text-blue-600" : "text-gray-500"}`}>
+                            <div className="mb-2" style={{ color: activeCategory === category.id ? 'var(--accent)' : 'var(--icon-secondary)' }}>
                                 {getIcon(category.name)}
                             </div>
-                            <h3 className="text-xs md:text-sm font-semibold text-gray-800 text-center line-clamp-1">
+                            <h3 className="text-xs md:text-sm font-semibold text-center line-clamp-1" style={{ color: 'var(--text-primary)' }}>
                                 {category.name}
                             </h3>
-                            <span className="text-[10px] text-gray-400 mt-1">
+                            <span className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>
                                 {category.count} Item
                             </span>
                         </Link>

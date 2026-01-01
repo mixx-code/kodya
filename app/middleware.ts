@@ -31,28 +31,45 @@ export async function middleware(request: NextRequest) {
         }
     )
 
-    // Refresh session if expired
-    const { data: { session } } = await supabase.auth.getSession()
+    // PENTING: Gunakan getUser() untuk keamanan lebih tinggi (menghindari pemalsuan JWT client-side)
+    const { data: { user } } = await supabase.auth.getUser()
 
-    // Protected routes
-    const protectedPaths = ['/dashboard', '/profile', '/settings']
-    const isProtectedPath = protectedPaths.some(path =>
-        request.nextUrl.pathname.startsWith(path)
-    )
+    const pathname = request.nextUrl.pathname
 
-    // Auth paths
+    // 1. DAFTAR ROUTE PROTEKSI UMUM (Harus Login)
+    // Mencakup cart, checkout, saldo, dan semua halaman admin
+    const isCustomerPath = ['/cart', '/checkout', '/saldo'].some(path => pathname.startsWith(path))
+    const isAdminPath = ['/dashboard', '/products'].some(path => pathname.startsWith(path))
+    
+    // 2. DAFTAR ROUTE AUTH (Login/Register)
     const authPaths = ['/login', '/register', '/forgot-password']
-    const isAuthPath = authPaths.includes(request.nextUrl.pathname)
+    const isAuthPath = authPaths.includes(pathname)
 
-    // Redirect logic
-    if (isProtectedPath && !session) {
+    // --- LOGIKA REDIRECT ---
+
+    // A. Jika akses route Terproteksi (Admin/Customer) tapi BELUM LOGIN
+    if ((isCustomerPath || isAdminPath) && !user) {
         const redirectUrl = new URL('/login', request.url)
-        redirectUrl.searchParams.set('redirect', request.nextUrl.pathname)
+        redirectUrl.searchParams.set('redirect', pathname)
         return NextResponse.redirect(redirectUrl)
     }
 
-    if (isAuthPath && session) {
-        return NextResponse.redirect(new URL('/dashboard', request.url))
+    // B. Jika akses route ADMIN tapi BUKAN ADMIN
+    if (isAdminPath && user) {
+        const role = user.app_metadata?.role // Pastikan di Supabase Auth, user punya metadata role: 'admin'
+        
+        if (role !== 'admin') {
+            // Jika bukan admin, tendang ke home (atau halaman khusus 403)
+            return NextResponse.redirect(new URL('/', request.url))
+        }
+    }
+
+    // C. Jika sudah LOGIN tapi mencoba akses halaman LOGIN/REGISTER
+    if (isAuthPath && user) {
+        // Jika admin ke dashboard, jika user biasa ke home/profile
+        const role = user.app_metadata?.role
+        const target = role === 'admin' ? '/dashboard' : '/'
+        return NextResponse.redirect(new URL(target, request.url))
     }
 
     return response
@@ -60,7 +77,15 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
     matcher: [
-        '/((?!_next/static|_next/image|favicon.ico|public/|auth/callback).*)',
-        //                           tambahkan ini ^^^^^^^^^^^^^^
+        /*
+         * Mencocokkan semua request path kecuali:
+         * - api (api routes)
+         * - _next/static (static files)
+         * - _next/image (image optimization files)
+         * - favicon.ico (favicon file)
+         * - public folder
+         * - auth/callback (penting untuk login flow)
+         */
+        '/((?!api|_next/static|_next/image|favicon.ico|public/|auth/callback).*)',
     ],
 }

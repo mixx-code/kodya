@@ -8,6 +8,7 @@ import {
   X,
   ChevronDown,
   Moon,
+  Sun,
   Settings,
   LogOut,
   ShoppingCart,
@@ -18,10 +19,11 @@ import {
 import { useAuth, useRole, useSignOut } from "@/hooks/useSupabase";
 import { useRouter } from "next/navigation";
 import PaymentModal from "./paymentModal";
-import { Tables } from '@/types/supabase';
+import { Database } from '@/types/supabase';
 import { createClient } from "@/lib/supabase-client";
 import Link from "next/link";
-type SaldoRow = Tables<'saldo'>;
+import { useDarkMode } from "../contexts/DarkModeContext";
+type SaldoRow = Database['public']['Tables']['saldo']['Row'];
 
 function Navbar() {
   const router = useRouter();
@@ -31,6 +33,8 @@ function Navbar() {
   const [saldo, setSaldo] = useState<SaldoRow | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [cartCount, setCartCount] = useState(0);
+  const { isDarkMode, toggleDarkMode } = useDarkMode();
 
   // Gunakan hook auth untuk mendapatkan data user
   const { user, loading: authLoading, error: authError } = useAuth();
@@ -53,8 +57,8 @@ function Navbar() {
   };
 
   useEffect(() => {
-    const fetchSaldoData = async () => {
-      // Jangan fetch saldo jika:
+    const fetchUserData = async () => {
+    // Jangan fetch data jika:
       // 1. Masih loading auth
       // 2. Ada error auth
       // 3. User belum login (user null)
@@ -65,8 +69,9 @@ function Navbar() {
         return;
       }
       if (!user) {
-        // Reset saldo dan set loading selesai jika user tidak login
+        // Reset data dan set loading selesai jika user tidak login
         setSaldo(null);
+        setCartCount(0);
         setError(null);
         setLoading(false);
         return;
@@ -76,21 +81,38 @@ function Navbar() {
       const supabase = createClient();
       try {
         const userId = user.id;
+
+        // Fetch saldo data
         const saldoResponse = await supabase.from('saldo').select('*').eq('id', userId).maybeSingle();
         if (saldoResponse.error) {
           setSaldo({ id: userId, amount: 0, currency: 'IDR', last_transaction_at: null, updated_at: null });
         } else {
           setSaldo(saldoResponse.data);
         }
+
+        // Fetch cart count
+        const { data: cartItems, error: cartError } = await supabase
+          .from('cart')
+          .select('id')
+          .eq('user_id', userId);
+
+        if (cartError) {
+          console.error('Error fetching cart:', cartError);
+          setCartCount(0);
+        } else {
+          setCartCount(cartItems?.length || 0);
+        }
+
         setError(null);
       } catch (err) {
         setError('Terjadi kesalahan saat memuat data');
+        setCartCount(0);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchSaldoData();
+    fetchUserData();
   }, [user, authLoading, authError]);
 
   const formatCurrency = (amount: number | null) => {
@@ -143,7 +165,6 @@ function Navbar() {
     if (!user) {
       return [
         { href: "/", label: "Market" },
-        { href: "/auth/login", label: "Masuk" },
       ];
     }
 
@@ -174,22 +195,34 @@ function Navbar() {
 
   if (authLoading) {
     return (
-      <nav className="h-14 bg-blue-300 dark:bg-blue-950 flex flex-row justify-between items-center box-border px-5 fixed top-0 left-0 right-0 z-50">
-        <div id="logo" className="flex items-center gap-2">
-          <Image
-            alt="Logo"
-            src={Logo}
-            className="w-11 h-11 rounded-full object-cover"
-          />
-          <h1 className="font-bold text-[1.3rem] text-white">Kodya</h1>
+      <nav className="h-14 flex flex-row justify-between items-center box-border px-5 fixed top-0 left-0 right-0 z-50" style={{
+        backgroundColor: 'var(--navbar-background)',
+        borderColor: 'var(--border-accent)'
+      }}>
+        <div id="logo" className="flex items-center gap-3">
+          <div className="relative">
+            <Image
+              alt="Logo"
+              src={Logo}
+              className="w-10 h-10 rounded-xl object-cover shadow-md"
+            />
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-400/20 to-purple-600/20 rounded-xl"></div>
+          </div>
+          <div className="flex flex-col">
+            <h1 className="font-bold text-xl tracking-tight" style={{ color: 'var(--navbar-foreground)' }}>Kodya</h1>
+            <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Digital Marketplace</p>
+          </div>
         </div>
-        <div className="text-white text-sm">Memuat...</div>
+        <div className="text-sm font-medium" style={{ color: 'var(--navbar-foreground)' }}>Memuat...</div>
       </nav>
     );
   }
 
   return (
-    <nav className="h-14 bg-blue-300 dark:bg-blue-950 flex flex-row justify-between items-center box-border px-5 fixed top-0 left-0 right-0 z-50">
+    <nav className="h-21 shadow-lg border-b flex flex-row justify-between items-center box-border px-10 sm:px-7 lg:px-10 fixed top-0 left-0 right-0 z-50" style={{
+      backgroundColor: 'var(--navbar-background)',
+      borderColor: 'var(--border-accent)'
+    }}>
       {/* Logo */}
       <div id="logo" className="flex items-center gap-2">
         <Image
@@ -197,12 +230,16 @@ function Navbar() {
           src={Logo}
           className="w-11 h-11 rounded-full object-cover"
         />
-        <h1 className="font-bold text-[1.3rem] text-white">Kodya</h1>
+        <h1 className="font-bold text-[1.3rem]" style={{ color: 'var(--navbar-foreground)' }}>Kodya</h1>
       </div>
 
       {/* Mobile Menu Button */}
       <button
-        className="md:hidden text-white focus:outline-none"
+        className="md:hidden p-2 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/20"
+        style={{
+          color: 'var(--navbar-foreground)',
+          backgroundColor: 'transparent'
+        }}
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         aria-label="Toggle menu"
       >
@@ -216,26 +253,28 @@ function Navbar() {
       {/* Desktop Navigation */}
       <div
         id="nav-menu"
-        className="hidden md:flex h-full flex-row items-center gap-6"
+        className="hidden md:flex h-full flex-row items-center gap-8"
       >
         {/* Menu Items */}
         {menuItems.map((item, index) => (
           <a
             key={index}
             href={item.href}
-            className={`flex items-center gap-1 transition-colors ${item.icon ? "relative" : ""
-              } ${
-              item.isHighlight
-                ? "bg-yellow-400 text-blue-950 px-3 py-1.5 rounded-lg font-bold hover:bg-yellow-300"
-                : "text-white hover:text-blue-200"
-              }`}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-all duration-200 ${item.icon ? "relative" : ""}`}
+            style={{
+              color: 'var(--navbar-foreground)',
+              backgroundColor: item.isHighlight ? 'var(--warning)' : 'transparent'
+            }}
           >
             {item.icon && item.icon}
             {item.label}
             {/* Badge Cart */}
             {item.href === "/cart" && (
-              <span className="absolute -top-2 -right-2 text-[10px] bg-red-600 text-white w-4 h-4 rounded-full flex items-center justify-center font-bold">
-                9+
+              <span className="ml-auto text-[0.8em] bg-red-600 text-white w-5 h-5 rounded-full flex items-center justify-center" style={{
+                color: 'var(--navbar-foreground)',
+                backgroundColor: 'var(--error)'
+              }}>
+                {cartCount > 99 ? '99+' : cartCount}
               </span>
             )}
           </a>
@@ -244,13 +283,21 @@ function Navbar() {
         {/* Saldo Display - Hanya tampil jika user sudah login */}
         {user && (
           <Link href="/saldo">
-            <div className="flex items-center gap-3 bg-white/10 hover:bg-white/15 backdrop-blur-md border border-white/20 p-1.5 pl-4 rounded-xl transition-all">
+            <div className="flex items-center gap-3 backdrop-blur-md border px-4 py-2.5 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md" style={{
+              backgroundColor: 'var(--card-background)',
+              borderColor: 'var(--border-primary)',
+              color: 'var(--text-primary)'
+            }}>
               <div className="text-left">
-                <p className="text-[9px] text-blue-200 uppercase font-medium">Saldo</p>
-                <p className="text-sm font-bold text-white tracking-wide">{formatCurrency(saldo?.amount || 0)},00</p>
+                <p className="text-[10px] uppercase font-semibold tracking-wider" style={{ color: 'var(--text-muted)' }}>Saldo</p>
+                <p className="text-sm font-bold tracking-wide" style={{ color: 'var(--text-primary)' }}>{formatCurrency(saldo?.amount || 0)}</p>
               </div>
               <button
-                className="bg-blue-500 hover:bg-blue-400 p-2 rounded-lg text-white shadow-lg shadow-blue-900/20 transition-all"
+                className="p-2 rounded-xl shadow-lg transition-all duration-200 transform hover:scale-105"
+                style={{
+                  backgroundColor: 'var(--accent)',
+                  color: 'var(--text-inverse)'
+                }}
                 onClick={() => setIsModalOpen(true)}
               >
                 <CirclePlus size={18} />
@@ -265,7 +312,11 @@ function Navbar() {
             <button
               id="profile"
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="flex flex-row items-center gap-2 hover:bg-blue-600 px-3 py-2 rounded-lg transition-colors"
+              className="flex flex-row items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-all duration-200"
+              style={{
+                backgroundColor: 'transparent',
+                color: 'var(--navbar-foreground)'
+              }}
             >
               {getUserAvatar() ? (
                 <Image
@@ -276,39 +327,41 @@ function Navbar() {
                   className="w-9 h-9 rounded-full object-cover"
                 />
               ) : (
-                <div className="w-9 h-9 rounded-full bg-blue-500 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-md">
                   <User className="w-5 h-5 text-white" />
                 </div>
               )}
               <div className="text-left">
-                <p className="text-white text-sm font-medium">
-                  {getUserName()}
-                </p>
-                <p className="text-blue-200 text-xs truncate max-w-30">
-                  {user.email}
-                </p>
+                <p className="text-sm font-semibold" style={{ color: 'var(--navbar-foreground)' }}>{getUserName()}</p>
+                <p className="text-xs truncate max-w-32" style={{ color: 'var(--text-muted)' }}>{user.email}</p>
               </div>
               <ChevronDown
-                className={`w-4 h-4 text-white transition-transform ${isDropdownOpen ? "rotate-180" : ""
-                  }`}
+                className={`w-4 h-4 transition-transform duration-200 ${isDropdownOpen ? "rotate-180" : ""}`}
+                style={{ color: 'var(--text-muted)' }}
               />
             </button>
 
             {/* Dropdown Menu */}
             {isDropdownOpen && (
-              <div className="dropdown-menu absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50 border border-gray-200">
-                <div className="px-4 py-2 border-b border-gray-100">
-                  <p className="text-gray-900 text-sm font-semibold truncate">
+              <div className="dropdown-menu absolute right-0 mt-3 w-56 rounded-xl shadow-2xl py-2 z-50 border overflow-hidden" style={{
+                backgroundColor: 'var(--card-background)',
+                borderColor: 'var(--border-primary)'
+              }}>
+                <div className="px-4 py-2 border-b" style={{ borderColor: 'var(--border-secondary)' }}>
+                  <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-secondary)' }}>
                     {getUserName()}
                   </p>
-                  <p className="text-gray-600 text-xs truncate">
+                  <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
                     {user.email}
                   </p>
                 </div>
 
                 <a
                   href="/profile"
-                  className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-blue-50 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                  style={{
+                    color: 'var(--text-primary)'
+                  }}
                   onClick={() => setIsDropdownOpen(false)}
                 >
                   <User className="w-4 h-4" />
@@ -317,28 +370,33 @@ function Navbar() {
 
                 <a
                   href="/settings"
-                  className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-blue-50 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
                   onClick={() => setIsDropdownOpen(false)}
                 >
                   <Settings className="w-4 h-4" />
                   <span>Pengaturan Akun</span>
                 </a>
 
-                <a
-                  href="#"
-                  className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-blue-50 transition-colors"
-                  onClick={() => setIsDropdownOpen(false)}
+                <button
+                  onClick={() => {
+                    toggleDarkMode();
+                    setIsDropdownOpen(false);
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
                 >
-                  <Moon className="w-4 h-4" />
-                  <span>Atur Mode</span>
-                </a>
+                  {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                  <span>{isDarkMode ? "Mode Terang" : "Mode Gelap"}</span>
+                </button>
 
-                <div className="border-t border-gray-100 my-1"></div>
+                <div className="border-t my-1" style={{ borderColor: 'var(--border-secondary)' }}></div>
 
                 <button
                   onClick={handleLogout}
                   disabled={signOutLoading}
-                  className="flex items-center gap-2 w-full px-4 py-2 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+                  className="flex items-center gap-2 w-full px-4 py-2 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
+                  style={{
+                    color: 'var(--error)'
+                  }}
                 >
                   <LogOut className="w-4 h-4" />
                   <span>{signOutLoading ? "Logging out..." : "Logout"}</span>
@@ -353,32 +411,64 @@ function Navbar() {
           <div className="flex items-center gap-3">
             <a
               href="/auth/login"
-              className="px-4 py-2 text-white hover:text-blue-200 transition-colors"
+              className="px-4 py-2 transition-colors font-medium"
+              style={{
+                color: 'var(--navbar-foreground)'
+              }}
             >
               Masuk
             </a>
             <a
               href="/auth/register"
-              className="px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors font-medium"
+              className="px-4 py-2 rounded-lg transition-colors font-medium"
+              style={{
+                backgroundColor: 'var(--accent)',
+                color: 'var(--text-inverse)'
+              }}
             >
               Daftar
             </a>
           </div>
         )}
+        <button
+          onClick={() => {
+            toggleDarkMode();
+            setIsDropdownOpen(false);
+          }}
+          className="flex items-center gap-2 px-4 py-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+        >
+          {isDarkMode ? <Sun className="w-4 h-4" color="white" /> : <Moon className="w-4 h-4" color="black" />}
+        </button>
       </div>
 
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
-        <div className="absolute top-14 left-0 right-0 bg-white md:hidden shadow-xl z-40 border-t border-gray-200">
+        <div className="absolute top-21 left-0 right-0 shadow-xl z-40 border-t" style={{
+          backgroundColor: 'var(--card-background)',
+          borderColor: 'var(--border-primary)'
+        }}>
           <div className="flex flex-col max-h-[calc(100vh-3.5rem)] overflow-y-auto">
             {/* Profile Section - Hanya tampil jika user login */}
+            <button
+              onClick={() => {
+                toggleDarkMode();
+                setIsDropdownOpen(false);
+              }}
+              className="flex items-center gap-2 px-4 py-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+            >
+              {isDarkMode ? <Sun className="w-4 h-4" color="white" /> : <Moon className="w-4 h-4" color="black" />}
+              <span style={{ color: 'var(--primary)' }}>{isDarkMode ? "Mode Terang" : "Mode Gelap"}</span>
+            </button>
             {user && (
               <div className="px-4 py-3">
-                <div className="flex items-center justify-between bg-linear-to-r from-blue-600 to-blue-500 p-3 rounded-xl shadow-md">
+                <div className="flex items-center justify-between p-3 rounded-xl shadow-md"
+                  style={{
+                    background: 'linear-gradient(to right, var(--accent), var(--accent-hover))',
+                  }}>
                   <Link href="/saldo" className="flex-1">
                     <div className="text-left">
-                      <p className="text-[10px] text-blue-100 uppercase font-semibold tracking-wider">Saldo Anda</p>
-                      <p className="text-base font-bold text-white tracking-wide">
+                      <p className="text-[10px] uppercase font-semibold tracking-wider" style={{ color: 'var(--text-inverse)' }}>Saldo Anda</p>
+                      <p className="text-base font-bold tracking-wide" style={{ color: 'var(--text-inverse)' }}>
                         {formatCurrency(saldo?.amount || 0)}
                         <span className="text-[10px] ml-0.5 opacity-80">,00</span>
                       </p>
@@ -386,7 +476,10 @@ function Navbar() {
                   </Link>
 
                   <button
-                    className="bg-white/20 hover:bg-white/30 p-2 rounded-lg text-white transition-all active:scale-95"
+                    className="p-2 rounded-lg text-white shadow-lg transition-all active:scale-95"
+                    style={{
+                      backgroundColor: 'rgba(255, 255, 255, 0.2)'
+                    }}
                     onClick={(e) => {
                       e.preventDefault(); // Mencegah Link ikut ter-klik
                       setIsModalOpen(true);
@@ -404,14 +497,20 @@ function Navbar() {
                 <a
                   key={index}
                   href={item.href}
-                  className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-blue-50 rounded-lg transition-colors font-medium"
+                  className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors font-medium"
+                  style={{
+                    color: 'var(--text-primary)',
+                    backgroundColor: 'transparent'
+                  }}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   {item.icon && item.icon}
                   <span>{item.label}</span>
                   {item.href === "/cart" && (
-                    <span className="ml-auto text-[0.8em] bg-red-600 text-white w-5 h-5 rounded-full flex items-center justify-center">
-                      9+
+                    <span className="ml-auto text-[0.8em] bg-red-600 text-white w-5 h-5 rounded-full flex items-center justify-center" style={{
+                      backgroundColor: 'var(--error)'
+                    }}>
+                      {cartCount > 99 ? '99+' : cartCount}
                     </span>
                   )}
                 </a>
@@ -419,7 +518,7 @@ function Navbar() {
             </div>
 
             {/* Divider */}
-            {user && <div className="border-t border-gray-200"></div>}
+            {user && <div className="border-t" style={{ borderColor: 'var(--border-secondary)' }}></div>}
 
             {/* Settings Links - Hanya untuk user yang login */}
             {user && (
@@ -430,7 +529,9 @@ function Navbar() {
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   <User className="w-5 h-5 text-blue-600" />
-                  <span className="font-medium">Profil Saya</span>
+                  <span className="font-medium" style={{ color: 'var(--accent)' }}>
+                    Profil Saya
+                  </span>
                 </a>
                 <a
                   href="/settings"
@@ -438,22 +539,31 @@ function Navbar() {
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   <Settings className="w-5 h-5 text-blue-600" />
-                  <span className="font-medium">Pengaturan Akun</span>
+                  <span className="font-medium" style={{ color: 'var(--accent)' }}>
+                    Pengaturan Akun
+                  </span>
                 </a>
-                <a
-                  href="#"
+                <button
+                  onClick={() => {
+                    toggleDarkMode();
+                    setIsMobileMenuOpen(false);
+                  }}
                   className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-blue-50 rounded-lg transition-colors"
-                  onClick={() => setIsMobileMenuOpen(false)}
                 >
-                  <Moon className="w-5 h-5 text-blue-600" />
-                  <span className="font-medium">Atur Mode</span>
-                </a>
+                  {isDarkMode ? <Sun className="w-5 h-5 text-blue-600" /> : <Moon className="w-5 h-5 text-blue-600" />}
+                  <span className="font-medium" style={{ color: 'var(--accent)' }}>
+                    {isDarkMode ? "Mode Terang" : "Mode Gelap"}
+                  </span>
+                </button>
 
-                <div className="border-t border-gray-200 pt-2">
+                <div className="border-t pt-2" style={{ borderColor: 'var(--border-secondary)' }}>
                   <button
                     onClick={handleLogout}
                     disabled={signOutLoading}
-                    className="flex items-center gap-3 w-full px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                    className="flex items-center gap-3 w-full px-4 py-3 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
+                    style={{
+                      color: 'var(--error)'
+                    }}
                   >
                     <LogOut className="w-5 h-5" />
                     <span className="font-medium">

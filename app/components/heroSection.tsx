@@ -2,6 +2,8 @@
 import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
+import { useDarkMode } from "../contexts/DarkModeContext";
 
 interface CarouselItem {
   id: number;
@@ -14,39 +16,24 @@ interface CarouselItem {
 
 function HeroSection() {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const { isDarkMode } = useDarkMode();
 
   const items: CarouselItem[] = [
     {
       id: 1,
-      title: "Website E-Commerce Premium",
-      description: "Template website toko online lengkap dengan admin panel",
-      price: "Rp 2.500.000",
+      title: "Website Premium",
+      description: "Template website profesional lengkap",
+      price: "Rp 50.000",
       image: "/product-1.jpg", // Ganti dengan path gambar kamu
       bgColor: "bg-gradient-to-r from-blue-500 to-purple-600",
     },
     {
       id: 2,
-      title: "Landing Page Bisnis",
-      description: "Desain landing page modern dan responsif untuk bisnis",
-      price: "Rp 1.500.000",
+      title: "Aplikasi Mobile Premium",
+      description: "Aplikasi mobile modern dengan fitur lengkap",
+      price: "Rp 500.000",
       image: "/product-2.jpg", // Ganti dengan path gambar kamu
       bgColor: "bg-gradient-to-r from-purple-500 to-pink-600",
-    },
-    {
-      id: 3,
-      title: "Dashboard Admin",
-      description: "Template dashboard admin dengan berbagai fitur lengkap",
-      price: "Rp 1.800.000",
-      image: "/product-1.jpg", // Ganti dengan path gambar kamu
-      bgColor: "bg-gradient-to-r from-green-500 to-teal-600",
-    },
-    {
-      id: 4,
-      title: "Mobile App UI Kit",
-      description: "Kumpulan UI components untuk aplikasi mobile",
-      price: "Rp 1.200.000",
-      image: "/product-2.jpg", // Ganti dengan path gambar kamu
-      bgColor: "bg-gradient-to-r from-orange-500 to-red-600",
     },
   ];
 
@@ -69,7 +56,7 @@ function HeroSection() {
   }, []);
 
   return (
-    <div className="relative w-full h-[350px] md:h-[500px] rounded-lg md:rounded-2xl overflow-hidden shadow-xl md:shadow-2xl">
+    <div className="relative w-full h-[350px] md:h-[500px] rounded-xl md:rounded-2xl overflow-hidden" style={{ backgroundColor: 'var(--card-background)', boxShadow: 'var(--card-shadow)' }}>
       {/* Carousel Items */}
       <div
         className="flex transition-transform duration-500 ease-out h-full"
@@ -82,30 +69,31 @@ function HeroSection() {
           >
             <div className="w-full px-4 md:px-12 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-8 max-w-7xl mx-auto">
               {/* Text Content */}
-              <div className="text-white max-w-lg space-y-2 md:space-y-4 text-center md:text-left z-10">
-                <h2 className="text-2xl md:text-5xl font-bold leading-tight">
+              <div className="max-w-lg space-y-2 md:space-y-4 text-center md:text-left z-10">
+                <h2 className="text-2xl md:text-5xl font-bold leading-tight text-white" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.1)', color: 'var(--text-primary)' }}>
                   {item.title}
                 </h2>
-                <p className="text-sm md:text-xl opacity-90 line-clamp-2 md:line-clamp-none">
+                <p className="text-sm md:text-xl opacity-90 line-clamp-2 md:line-clamp-none text-white" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.1)', color: 'var(--text-secondary)' }}>
                   {item.description}
                 </p>
                 <div className="flex flex-col md:flex-row items-center gap-2 md:gap-4 justify-center md:justify-start pt-2">
-                  <p className="text-xl md:text-3xl font-bold">{item.price}</p>
-                  <button className="bg-white text-gray-900 px-5 py-2 md:px-6 md:py-3 rounded-full text-sm md:text-base font-semibold hover:bg-gray-100 transition shadow-lg">
-                    Lihat Detail
-                  </button>
+                  <p className="text-xl md:text-3xl font-bold text-white" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.1)', color: 'var(--text-primary)' }}>  <span className="font-semibold italic text-white/80">Mulai dari </span>{item.price}</p>
+
                 </div>
               </div>
 
               {/* Product Image/Screenshot */}
               <div className="relative w-full md:w-[500px] h-[140px] md:h-[350px] flex-shrink-0">
-                <div className="absolute inset-0 bg-white/10 backdrop-blur-sm rounded-lg md:rounded-xl overflow-hidden shadow-2xl border border-white/20">
+                <div className="absolute inset-0 bg-black/20 backdrop-blur-sm rounded-lg md:rounded-xl overflow-hidden shadow-2xl border border-white/20">
                   <Image
                     src={item.image}
                     alt={item.title}
                     fill
                     className="object-cover object-top"
                     priority={currentIndex === item.id - 1}
+                    onError={(e) => {
+                      e.currentTarget.src = "/placeholder-product.jpg";
+                    }}
                   />
                 </div>
               </div>

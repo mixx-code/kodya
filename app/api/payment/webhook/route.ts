@@ -20,7 +20,7 @@ const supabaseAdmin = createClient(
 export async function POST(request: NextRequest) {
     try {
         const body: MidtransNotification = await request.json();
-        console.log('🔔 Webhook received for Order:', body.order_id);
+        console.log('🔔 Webhook received for Order:', body);
 
         // 1. Verifikasi Signature (Keamanan agar tidak sembarang orang bisa nembak API ini)
         const serverKey = process.env.MIDTRANS_SERVER_KEY || '';

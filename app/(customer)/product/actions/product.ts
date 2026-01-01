@@ -12,7 +12,7 @@ export async function getProductById(id: number) {
         .single();
 
     if (error) {
-        console.error('Error fetching product:', error);
+        console.log('Error fetching product:', error);
         return null;
     }
 

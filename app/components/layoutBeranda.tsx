@@ -1,13 +1,19 @@
+"use client";
+
+import { useDarkMode } from "../contexts/DarkModeContext";
+
 export default function LayoutBeranda({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const { isDarkMode } = useDarkMode();
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)' }}>
       {/* Desktop Layout */}
       <div className="hidden md:block">
-        <div className="container mx-auto px-6 py-8 max-w-[90%] mt-12">
+        <div className="container mx-auto px-6 py-8 max-w-[90%] mt-21">
           {children}
         </div>
       </div>
