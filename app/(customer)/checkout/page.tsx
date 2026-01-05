@@ -11,11 +11,11 @@ import {
   AlertCircle,
   Loader2,
   ArrowLeft,
-  Info,
-  X,
-  AlertTriangle
+  Info
 } from "lucide-react";
 import { useDarkMode } from "../../contexts/DarkModeContext";
+import Alert from "@/app/components/Alert";
+import { useAlert } from "@/hooks/useAlert";
 
 // Import tipe Database asli dari file types/supabase.ts
 import { Database } from "@/types/supabase";
@@ -58,20 +58,13 @@ export default function CheckoutPage() {
   const [processing, setProcessing] = useState(false);
   const [notes, setNotes] = useState("");
   const [isDirectCheckout, setIsDirectCheckout] = useState(false);
-  const [alert, setAlert] = useState<{
-    show: boolean;
-    type: 'success' | 'error' | 'warning' | 'info';
-    title: string;
-    isConfirm?: boolean;
-    onConfirm?: () => void;
-    onCancel?: () => void;
-    message: string;
-  }>({ show: false, type: 'info', title: '', isConfirm: false, message: '', onConfirm: () => {}, onCancel: () => {} });
+
+  const { alert, showAlert, showConfirm, hideAlert } = useAlert();
 
   useEffect(() => {
     const productId = searchParams.get('product_id');
     const quantity = searchParams.get('quantity');
-    
+
     if (productId && quantity) {
       // Direct checkout mode
       setIsDirectCheckout(true);
@@ -189,8 +182,43 @@ export default function CheckoutPage() {
     }
   };
 
-  const calculateTax = () => calculateSubtotal() * 0.11;
-  const shippingCost = 10000;
+  const [taxRate, setTaxRate] = useState<number>(0); // Default 11%
+  console.log(taxRate);
+
+  // Fetch tax rate dari database
+  useEffect(() => {
+    const fetchTaxRate = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('taxes')
+          .select('rate')
+          .eq('is_active', true)
+          .single();
+
+        console.log("data tax rate", data);
+        console.log("error tax rate", error);
+        if (error) {
+          console.error('Error fetching tax rate:', error);
+          return;
+        }
+
+        if (data) {
+          setTaxRate(Number(data.rate)); // Rate sudah dalam format desimal (0.1100)
+        }
+      } catch (error) {
+        console.error('Error fetching tax rate:', error);
+        // Keep default 0% if error
+      }
+    };
+
+    fetchTaxRate();
+  }, []);
+
+  const calculateTax = () => {
+    // Tax rate dari database (default 11%)
+    return calculateSubtotal() * taxRate;
+  };
+  const shippingCost = 0;
   const calculateTotal = () => calculateSubtotal() + calculateTax() + shippingCost;
 
   const formatPrice = (price: number) => {
@@ -199,28 +227,6 @@ export default function CheckoutPage() {
       currency: "IDR",
       minimumFractionDigits: 0,
     }).format(price);
-  };
-
-  const showAlert = (type: 'success' | 'error' | 'warning' | 'info', title: string, message: string) => {
-    setAlert({ show: true, type, title, message });
-  };
-
-  const hideAlert = () => {
-    setAlert({ show: false, type: 'info', title: '', message: '' });
-  };
-
-  const confirmAction = (title: string, message: string): Promise<boolean> => {
-    return new Promise((resolve) => {
-      setAlert({ 
-        show: true, 
-        type: 'info', 
-        title, 
-        message,
-        isConfirm: true,
-        onConfirm: () => resolve(true),
-        onCancel: () => resolve(false)
-      });
-    });
   };
 
   const handleCheckout = async () => {
@@ -232,11 +238,11 @@ export default function CheckoutPage() {
       return;
     }
 
-    const confirmed = await confirmAction(
+    const confirmed = await showConfirm(
       'Konfirmasi Pembayaran',
       `Apakah Anda yakin ingin melakukan pembayaran sebesar ${formatPrice(total)}?`
     );
-    
+
     if (!confirmed) return;
 
     setProcessing(true);
@@ -280,22 +286,22 @@ export default function CheckoutPage() {
       }
 
       const response = data as unknown as CheckoutResponse;
-      
+
       if (response.success) {
         showAlert(
-          'success', 
-          'Pembayaran Berhasil!', 
+          'success',
+          'Pembayaran Berhasil!',
           'Transaksi Anda telah berhasil diproses. Akses produk akan segera tersedia.'
         );
-        
+
         // Redirect ke halaman my-orders setelah 2 detik
         setTimeout(() => {
           router.push('/my-orders');
         }, 2000);
       } else {
         showAlert(
-          'error', 
-          'Checkout Gagal', 
+          'error',
+          'Checkout Gagal',
           response.message || 'Terjadi kesalahan saat memproses transaksi.'
         );
       }
@@ -303,8 +309,8 @@ export default function CheckoutPage() {
     } catch (error) {
       console.error('Checkout error:', error);
       showAlert(
-        'error', 
-        'Terjadi Kesalahan', 
+        'error',
+        'Terjadi Kesalahan',
         (error as Error).message || 'Gagal memproses transaksi. Silakan coba lagi.'
       );
     } finally {
@@ -341,9 +347,9 @@ export default function CheckoutPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Kolom Kiri: Detail & Pembayaran */}
           <div className="lg:col-span-2 space-y-6">
-            
+
             {/* Informasi Saldo */}
-            <div className={`rounded-xl shadow-sm p-6 border-2 ${isSaldoSufficient ? 'border-success' : 'border-error'}`} style={{ 
+            <div className={`rounded-xl shadow-sm p-6 border-2 ${isSaldoSufficient ? 'border-success' : 'border-error'}`} style={{
               backgroundColor: 'var(--card-background)',
               borderColor: isSaldoSufficient ? 'var(--success)' : 'var(--error)'
             }}>
@@ -443,7 +449,7 @@ export default function CheckoutPage() {
           <div className="lg:col-span-1">
             <div className="rounded-xl shadow-sm p-6 sticky top-4 border" style={{ backgroundColor: 'var(--card-background)', borderColor: 'var(--border-primary)' }}>
               <h2 className="text-lg font-bold mb-4" style={{ color: 'var(--text-primary)' }}>Ringkasan Biaya</h2>
-              
+
               <div className="space-y-3 text-sm pb-4 border-b" style={{ color: 'var(--text-secondary)', borderBottomColor: 'var(--border-muted)' }}>
                 <div className="flex justify-between">
                   <span>Subtotal</span>
@@ -467,11 +473,10 @@ export default function CheckoutPage() {
               <button
                 onClick={handleCheckout}
                 disabled={processing || !isSaldoSufficient}
-                className={`w-full py-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${
-                  isSaldoSufficient 
-                    ? 'shadow-lg transform hover:scale-105' 
+                className={`w-full py-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${isSaldoSufficient
+                  ? 'shadow-lg transform hover:scale-105'
                     : 'cursor-not-allowed'
-                }`}
+                  }`}
                 style={{
                   backgroundColor: isSaldoSufficient ? 'var(--success)' : 'var(--border-muted)',
                   color: isSaldoSufficient ? 'var(--text-inverse)' : 'var(--text-muted)',
@@ -485,7 +490,7 @@ export default function CheckoutPage() {
               {!isSaldoSufficient && (
                 <button
                   onClick={() => router.push('/topup')}
-                  className="w-full mt-3 py-3 rounded-xl font-bold transition-colors transform hover:scale-105"
+                  className="w-full mt-3 py-3 rounded-xl font-bold transition-colors"
                   style={{
                     backgroundColor: 'transparent',
                     color: 'var(--accent)',
@@ -509,102 +514,16 @@ export default function CheckoutPage() {
       </div>
 
       {/* Custom Alert Modal */}
-      {alert.show && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div 
-            className="rounded-xl shadow-2xl max-w-md w-full p-6 transform transition-all duration-300 scale-100"
-            style={{ 
-              backgroundColor: 'var(--card-background)',
-              border: `2px solid ${
-                alert.type === 'success' ? 'var(--success)' :
-                alert.type === 'error' ? 'var(--error)' :
-                alert.type === 'warning' ? 'var(--warning)' :
-                'var(--info)'
-              }`
-            }}
-          >
-            <div className="flex items-start gap-4">
-              <div 
-                className="p-2 rounded-full"
-                style={{
-                  backgroundColor: 
-                    alert.type === 'success' ? 'var(--success)' :
-                    alert.type === 'error' ? 'var(--error)' :
-                    alert.type === 'warning' ? 'var(--warning)' :
-                    'var(--info)'
-                }}
-              >
-                {alert.type === 'success' && <CheckCircle className="w-6 h-6" style={{ color: 'var(--text-inverse)' }} />}
-                {alert.type === 'error' && <AlertCircle className="w-6 h-6" style={{ color: 'var(--text-inverse)' }} />}
-                {alert.type === 'warning' && <AlertTriangle className="w-6 h-6" style={{ color: 'var(--text-inverse)' }} />}
-                {alert.type === 'info' && <Info className="w-6 h-6" style={{ color: 'var(--text-inverse)' }} />}
-              </div>
-              <div className="flex-grow">
-                <h3 className="font-bold text-lg mb-2" style={{ color: 'var(--text-primary)' }}>
-                  {alert.title}
-                </h3>
-                <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
-                  {alert.message}
-                </p>
-                
-                {(alert as any).isConfirm ? (
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => {
-                        (alert as any).onCancel?.();
-                        hideAlert();
-                      }}
-                      className="px-4 py-2 rounded-lg font-semibold transition-colors"
-                      style={{
-                        backgroundColor: 'transparent',
-                        color: 'var(--text-secondary)',
-                        border: `1px solid var(--border-primary)`
-                      }}
-                    >
-                      Batal
-                    </button>
-                    <button
-                      onClick={() => {
-                        (alert as any).onConfirm?.();
-                        hideAlert();
-                      }}
-                      className="px-4 py-2 rounded-lg font-semibold transition-colors"
-                      style={{
-                        backgroundColor: 'var(--accent)',
-                        color: 'var(--text-inverse)'
-                      }}
-                    >
-                      Ya, Lanjutkan
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={hideAlert}
-                    className="px-4 py-2 rounded-lg font-semibold transition-colors"
-                    style={{
-                      backgroundColor: 
-                        alert.type === 'success' ? 'var(--success)' :
-                        alert.type === 'error' ? 'var(--error)' :
-                        alert.type === 'warning' ? 'var(--warning)' :
-                        'var(--info)',
-                      color: 'var(--text-inverse)'
-                    }}
-                  >
-                    OK
-                  </button>
-                )}
-              </div>
-              <button
-                onClick={hideAlert}
-                className="p-1 rounded-lg transition-colors"
-                style={{ color: 'var(--text-muted)' }}
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Alert
+        show={alert.show}
+        type={alert.type}
+        title={alert.title}
+        message={alert.message}
+        isConfirm={alert.isConfirm}
+        onConfirm={alert.onConfirm}
+        onCancel={alert.onCancel}
+        onClose={hideAlert}
+      />
     </div>
   );
 }

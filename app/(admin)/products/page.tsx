@@ -208,22 +208,40 @@ export default function ProductsListPage() {
 
     setDeleteLoading(productId.toString());
     try {
-      const { error } = await supabase
+      console.log('🗑️ Attempting to delete product:', productId);
+
+      const { error, count } = await supabase
         .from('products')
-        .delete()
+        .delete({ count: 'exact' })
         .eq('id', productId);
 
       if (error) {
         console.error('Error deleting product:', error);
-        alert('Gagal menghapus produk');
+        alert(`Gagal menghapus produk: ${error.message}`);
+        return;
+      }
+
+      console.log('✅ Product deleted successfully, affected rows:', count);
+
+      if (count === 0) {
+        console.warn('⚠️ No rows were deleted - product might not exist or insufficient permissions');
+        alert('Produk tidak ditemukan atau tidak memiliki izin untuk menghapus');
         return;
       }
 
       // Remove from local state
       setProducts(prev => prev.filter(p => p.id !== productId));
+
+      // Show success notification
       alert('Produk berhasil dihapus');
+
+      // Optional: Refresh data to ensure consistency
+      setTimeout(() => {
+        fetchProducts();
+      }, 500);
+
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Unexpected error during deletion:', error);
       alert('Terjadi kesalahan saat menghapus produk');
     } finally {
       setDeleteLoading(null);
@@ -264,7 +282,7 @@ export default function ProductsListPage() {
               Daftar Produk
             </h1>
             <Link
-              href="/admin/products/create"
+              href="/products/create"
               className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all"
               style={{
                 backgroundColor: 'var(--primary)',
@@ -276,51 +294,6 @@ export default function ProductsListPage() {
               <Plus className="w-4 h-4" />
               Tambah Produk
             </Link>
-          </div>
-
-          {/* Debug Test Button */}
-          <div className="p-4 rounded-lg border mb-6" style={{
-            backgroundColor: 'var(--card-background)',
-            borderColor: 'var(--card-border)'
-          }}>
-            <button
-              onClick={() => {
-                console.log('🧪 Testing WebSocket products connection...');
-                console.log('📊 WebSocket connected:', websocketService.isConnected());
-
-                // Test with mock product data
-                const testProduct = {
-                  id: 999,
-                  title: 'Test Product Real-Time',
-                  description: 'Ini adalah produk test real-time!',
-                  category: 'Test',
-                  price: '100000',
-                  demo_url: null,
-                  link_program: null,
-                  images: null,
-                  tech_stack: ['Test'],
-                  features: ['Feature test'],
-                  rating: 5,
-                  reviews: 1,
-                  sales: 0,
-                  created_at: new Date().toISOString(),
-                  updated_at: new Date().toISOString()
-                };
-
-                console.log('📤 Sending test product:', testProduct);
-                websocketService.notifyNewProduct(testProduct);
-              }}
-              className="px-4 py-2 rounded-lg font-medium transition-colors mr-4"
-              style={{
-                backgroundColor: 'var(--accent)',
-                color: 'var(--text-inverse)'
-              }}
-            >
-              🧪 Test Real-Time Product
-            </button>
-            <span className="text-sm" style={{ color: 'var(--text-muted)' }}>
-              Klik untuk testing WebSocket real-time product updates
-            </span>
           </div>
 
           {/* Search and Filter */}
@@ -492,7 +465,7 @@ export default function ProductsListPage() {
                   {/* Actions */}
                   <div className="flex gap-2 pt-3 border-t" style={{ borderColor: 'var(--border-muted)' }}>
                     <Link
-                      href={`/admin/products/${product.id}`}
+                      href={`/products/${product.id}`}
                       className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-all"
                       style={{
                         backgroundColor: 'var(--border-muted)',
@@ -506,7 +479,7 @@ export default function ProductsListPage() {
                     </Link>
                     
                     <Link
-                      href={`/admin/products/${product.id}/edit`}
+                      href={`/products/${product.id}/edit`}
                       className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-all"
                       style={{
                         backgroundColor: 'var(--border-muted)',
@@ -528,8 +501,12 @@ export default function ProductsListPage() {
                         color: 'var(--error)',
                         borderColor: 'var(--error)'
                       }}
-                      onMouseEnter={(e) => !deleteLoading && (e.currentTarget.style.backgroundColor = 'var(--error)30')}
-                      onMouseLeave={(e) => !deleteLoading && (e.currentTarget.style.backgroundColor = 'var(--error)20)')}
+                      onMouseEnter={(e) => {
+                        if (!deleteLoading) e.currentTarget.style.backgroundColor = 'var(--error)30';
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!deleteLoading) e.currentTarget.style.backgroundColor = 'var(--error)20';
+                      }}
                     >
                       {deleteLoading === product.id.toString() ? (
                         <Loader2 className="w-4 h-4 animate-spin" />

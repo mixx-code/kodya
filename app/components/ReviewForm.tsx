@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Star } from "lucide-react";
 import { createClient } from "@/lib/supabase-client";
 import { websocketService } from "@/lib/websocket";
+import { showNotification } from "./Notification";
 
 interface ReviewFormProps {
   orderId: string;
@@ -21,7 +22,10 @@ export function ReviewForm({ orderId, productId, onReviewSubmitted }: ReviewForm
     e.preventDefault();
     
     if (rating === 0) {
-      alert('Silakan pilih rating terlebih dahulu');
+      showNotification({
+        message: 'Silakan pilih rating terlebih dahulu',
+        type: 'error'
+      });
       return;
     }
 
@@ -30,7 +34,10 @@ export function ReviewForm({ orderId, productId, onReviewSubmitted }: ReviewForm
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        alert('User tidak ditemukan');
+        showNotification({
+          message: 'User tidak ditemukan',
+          type: 'error'
+        });
         return;
       }
 
@@ -45,7 +52,10 @@ export function ReviewForm({ orderId, productId, onReviewSubmitted }: ReviewForm
 
       if (!orderId || !productId || !user.id || rating < 1 || rating > 5) {
         console.error('Invalid data:', { orderId, productId, userId: user.id, rating });
-        alert('Data tidak valid. Silakan coba lagi.');
+        showNotification({
+          message: 'Data tidak valid. Silakan coba lagi.',
+          type: 'error'
+        });
         return;
       }
 
@@ -74,7 +84,10 @@ export function ReviewForm({ orderId, productId, onReviewSubmitted }: ReviewForm
           hint: error.hint,
           code: error.code
         });
-        alert(`Gagal mengirim review: ${error.message || 'Unknown error'}`);
+        showNotification({
+          message: `Gagal mengirim review: ${error.message || 'Unknown error'}`,
+          type: 'error'
+        });
       } else {
         // Send real-time notification via WebSocket
         if (data && data.length > 0) {
@@ -97,14 +110,20 @@ export function ReviewForm({ orderId, productId, onReviewSubmitted }: ReviewForm
           websocketService.notifyNewReview(productId, reviewWithUser);
         }
 
-        alert('Review berhasil dikirim!');
+        showNotification({
+          message: 'Review berhasil dikirim!',
+          type: 'success'
+        });
         setRating(0);
         setComment("");
         onReviewSubmitted?.();
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('Terjadi kesalahan');
+      showNotification({
+        message: 'Terjadi kesalahan',
+        type: 'error'
+      });
     } finally {
       setIsSubmitting(false);
     }

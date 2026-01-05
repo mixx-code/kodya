@@ -23,6 +23,7 @@ import { Database } from '@/types/supabase';
 import { createClient } from "@/lib/supabase-client";
 import Link from "next/link";
 import { useDarkMode } from "../contexts/DarkModeContext";
+import { useCart } from "../contexts/CartContext";
 type SaldoRow = Database['public']['Tables']['saldo']['Row'];
 
 function Navbar() {
@@ -33,7 +34,7 @@ function Navbar() {
   const [saldo, setSaldo] = useState<SaldoRow | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [cartCount, setCartCount] = useState(0);
+  const { cartCount } = useCart();
   const { isDarkMode, toggleDarkMode } = useDarkMode();
 
   // Gunakan hook auth untuk mendapatkan data user
@@ -71,7 +72,6 @@ function Navbar() {
       if (!user) {
         // Reset data dan set loading selesai jika user tidak login
         setSaldo(null);
-        setCartCount(0);
         setError(null);
         setLoading(false);
         return;
@@ -90,23 +90,9 @@ function Navbar() {
           setSaldo(saldoResponse.data);
         }
 
-        // Fetch cart count
-        const { data: cartItems, error: cartError } = await supabase
-          .from('cart')
-          .select('id')
-          .eq('user_id', userId);
-
-        if (cartError) {
-          console.error('Error fetching cart:', cartError);
-          setCartCount(0);
-        } else {
-          setCartCount(cartItems?.length || 0);
-        }
-
         setError(null);
       } catch (err) {
         setError('Terjadi kesalahan saat memuat data');
-        setCartCount(0);
       } finally {
         setLoading(false);
       }
@@ -178,7 +164,6 @@ function Navbar() {
         { href: "/", label: "Market" },
         { href: "/dashboard", label: "Dashboard" },
         { href: "/products", label: "List Products" },
-        { href: "/products/create", label: "Create Product", isHighlight: true },
         { href: "/cart", label: "", icon: <ShoppingCart className="w-5 h-5" /> },
       ];
     }
@@ -263,7 +248,7 @@ function Navbar() {
             className={`flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-all duration-200 ${item.icon ? "relative" : ""}`}
             style={{
               color: 'var(--navbar-foreground)',
-              backgroundColor: item.isHighlight ? 'var(--warning)' : 'transparent'
+              // backgroundColor: item.isHighlight ? 'var(--warning)' : 'transparent'
             }}
           >
             {item.icon && item.icon}
@@ -368,26 +353,6 @@ function Navbar() {
                   <span>Profil Saya</span>
                 </a>
 
-                <a
-                  href="/settings"
-                  className="flex items-center gap-2 px-4 py-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                  onClick={() => setIsDropdownOpen(false)}
-                >
-                  <Settings className="w-4 h-4" />
-                  <span>Pengaturan Akun</span>
-                </a>
-
-                <button
-                  onClick={() => {
-                    toggleDarkMode();
-                    setIsDropdownOpen(false);
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                >
-                  {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-                  <span>{isDarkMode ? "Mode Terang" : "Mode Gelap"}</span>
-                </button>
-
                 <div className="border-t my-1" style={{ borderColor: 'var(--border-secondary)' }}></div>
 
                 <button
@@ -449,7 +414,7 @@ function Navbar() {
         }}>
           <div className="flex flex-col max-h-[calc(100vh-3.5rem)] overflow-y-auto">
             {/* Profile Section - Hanya tampil jika user login */}
-            <button
+            {/* <button
               onClick={() => {
                 toggleDarkMode();
                 setIsDropdownOpen(false);
@@ -458,7 +423,7 @@ function Navbar() {
             >
               {isDarkMode ? <Sun className="w-4 h-4" color="white" /> : <Moon className="w-4 h-4" color="black" />}
               <span style={{ color: 'var(--primary)' }}>{isDarkMode ? "Mode Terang" : "Mode Gelap"}</span>
-            </button>
+            </button> */}
             {user && (
               <div className="px-4 py-3">
                 <div className="flex items-center justify-between p-3 rounded-xl shadow-md"
@@ -531,16 +496,6 @@ function Navbar() {
                   <User className="w-5 h-5 text-blue-600" />
                   <span className="font-medium" style={{ color: 'var(--accent)' }}>
                     Profil Saya
-                  </span>
-                </a>
-                <a
-                  href="/settings"
-                  className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-blue-50 rounded-lg transition-colors"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  <Settings className="w-5 h-5 text-blue-600" />
-                  <span className="font-medium" style={{ color: 'var(--accent)' }}>
-                    Pengaturan Akun
                   </span>
                 </a>
                 <button

@@ -43,13 +43,11 @@ function Category() {
         <div className="container mx-auto px-4 py-6">
             {/* Back Button */}
             <button
-                onClick={() => router.back()}
-                className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-all mb-6 group"
+                onClick={() => router.push('/')}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 mb-6"
             >
-                <div className="p-2 rounded-full group-hover:bg-blue-50">
-                    <ArrowLeft className="w-5 h-5" />
-                </div>
-                <span className="font-medium">Kembali ke Beranda</span>
+                <ArrowLeft className="w-5 h-5" />
+                Kembali ke Beranda
             </button>
 
             <ShowWindow

@@ -10,7 +10,8 @@ import {
   CheckCircle,
   Clock,
   Loader2,
-  Download
+  Download,
+  ArrowLeft
 } from "lucide-react";
 import { createClient } from "@/lib/supabase-client";
 
@@ -195,6 +196,14 @@ function MyOrder() {
     <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8" style={{ backgroundColor: 'var(--background)' }}>
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 mb-4"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            Kembali ke Beranda
+          </Link>
+
           <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>
             Pesanan Saya
           </h1>

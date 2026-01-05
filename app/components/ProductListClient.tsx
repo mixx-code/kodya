@@ -170,28 +170,42 @@ export default function ProductListClient({
 
     return (
         <div className="space-y-6">
-
             {/* Search Input */}
             <div className="relative w-full max-w-md">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: 'var(--icon-muted)' }} />
-                <input
-                    type="text"
-                    placeholder="Cari produk..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border rounded-lg outline-none transition-all"
-                    style={{
-                        borderColor: 'var(--border-secondary)',
-                        backgroundColor: 'var(--card-background)',
-                        color: 'var(--text-primary)'
-                    }}
-                    onFocus={(e) => {
-                        e.currentTarget.style.borderColor = 'var(--primary)';
-                    }}
-                    onBlur={(e) => {
-                        e.currentTarget.style.borderColor = 'var(--border-secondary)';
-                    }}
-                />
+                <div suppressHydrationWarning>
+                    {mounted ? (
+                        <input
+                            type="text"
+                            placeholder="Cari produk..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-10 pr-4 py-3 border rounded-lg outline-none transition-all"
+                            style={{
+                                borderColor: 'var(--border-secondary)',
+                                backgroundColor: 'var(--card-background)',
+                                color: 'var(--text-primary)'
+                            }}
+                            onFocus={(e) => {
+                                e.currentTarget.style.borderColor = 'var(--primary)';
+                            }}
+                            onBlur={(e) => {
+                                e.currentTarget.style.borderColor = 'var(--border-secondary)';
+                            }}
+                        />
+                    ) : (
+                        <div
+                            className="w-full pl-10 pr-4 py-3 border rounded-lg outline-none transition-all"
+                            style={{
+                                borderColor: 'var(--border-secondary)',
+                                backgroundColor: 'var(--card-background)',
+                                color: 'var(--text-primary)'
+                            }}
+                        >
+                            Cari produk...
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Products Grid */}
@@ -222,24 +236,38 @@ export default function ProductListClient({
                 {/* Load More Button - only show when not searching and there are more products */}
                 {!debouncedSearchTerm && cursor && (
                     <div className="flex justify-center">
-                        <button
-                            onClick={loadMore}
-                            disabled={loading}
-                            className="px-8 py-3 font-bold rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                            style={{
-                                backgroundColor: 'var(--accent)',
-                                color: 'var(--text-inverse)',
-                                boxShadow: 'var(--card-shadow)'
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = 'var(--accent-hover)';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = 'var(--accent)';
-                            }}
-                        >
-                            {loading ? "Loading..." : "Muat Lebih Banyak"}
-                        </button>
+                        {mounted ? (
+                            <button
+                                onClick={loadMore}
+                                disabled={loading}
+                                className="px-8 py-3 font-bold rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                                style={{
+                                    backgroundColor: 'var(--accent)',
+                                    color: 'var(--text-inverse)',
+                                    boxShadow: 'var(--card-shadow)'
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = 'var(--accent-hover)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = 'var(--accent)';
+                                }}
+                            >
+                                {loading ? "Loading..." : "Muat Lebih Banyak"}
+                            </button>
+                        ) : (
+                            <button
+                                disabled
+                                className="px-8 py-3 font-bold rounded-xl transition-all duration-200 transform shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                                style={{
+                                    backgroundColor: 'var(--accent)',
+                                    color: 'var(--text-inverse)',
+                                    boxShadow: 'var(--card-shadow)'
+                                }}
+                            >
+                                Muat Lebih Banyak
+                            </button>
+                        )}
                     </div>
                 )}
             </div>

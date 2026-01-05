@@ -418,14 +418,7 @@ function OrderDetail() {
         <div className="mb-8">
           <button
             onClick={() => router.back()}
-            className="flex items-center gap-2 mb-4 transition-colors"
-            style={{ color: 'var(--text-muted)' }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = 'var(--text-primary)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = 'var(--text-muted)';
-            }}
+            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 mb-4"
           >
             <ArrowLeft className="w-5 h-5" />
             Kembali ke Daftar Pesanan

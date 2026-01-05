@@ -1,11 +1,13 @@
 "use client";
-import { useState, useEffect } from 'react';
-import { CirclePlus, Wallet, ArrowDownRight, ArrowUpRight, History, Loader2, AlertCircle, CreditCard, ChevronDown, X, CheckCircle, Clock } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { CirclePlus, Wallet, ArrowDownRight, ArrowUpRight, History, Loader2, AlertCircle, CreditCard, ChevronDown, X, CheckCircle, Clock, ExternalLink } from 'lucide-react';
 import PaymentModal from '@/app/components/paymentModal';
+import { showNotification } from '@/app/components/Notification';
 import { createClient } from '@/lib/supabase-client';
 import { useAuth } from '@/hooks/useSupabase';
 import { useDarkMode } from '@/app/contexts/DarkModeContext';
 import { Database } from '@/types/supabase';
+import Link from 'next/link';
 
 type SaldoRow = Database['public']['Tables']['saldo']['Row'];
 type TopupHistoryRow = Database['public']['Tables']['topup_history']['Row'];
@@ -36,16 +38,18 @@ function Saldo() {
     const [error, setError] = useState<string | null>(null);
     const [payingOrderId, setPayingOrderId] = useState<string | null>(null);
     const [hasMore, setHasMore] = useState(false);
-    const [paymentNotification, setPaymentNotification] = useState<{
-        type: 'success' | 'pending' | 'failed' | null;
-        message: string;
-    }>({ type: null, message: '' });
 
     const itemsPerPage = 5;
+    const topupHistoryRef = useRef(topupHistory);
+    topupHistoryRef.current = topupHistory;
 
     // --- LOGIKA FETCH DATA (CURSOR BASED) ---
-    const fetchData = async (isInitial = true) => {
-        if (!user) return;
+    const fetchData = useCallback(async (isInitial = true) => {
+        if (!user) {
+            setLoading(false);
+            setIsLoadingMore(false);
+            return;
+        }
 
         if (isInitial) setLoading(true);
         else setIsLoadingMore(true);
@@ -54,9 +58,27 @@ function Saldo() {
         try {
             // 1. Ambil Saldo (Hanya saat load awal)
             if (isInitial) {
-                const { data: saldoData } = await supabase.from('saldo').select('*').eq('id', user.id).maybeSingle();
-                if (saldoData) setSaldo(saldoData);
-                else setSaldo({ id: user.id, amount: 0, currency: 'IDR', last_transaction_at: null, updated_at: null });
+                try {
+                    const { data: saldoData, error: saldoError } = await supabase
+                        .from('saldo')
+                        .select('*')
+                        .eq('id', user.id)
+                        .maybeSingle();
+
+                    if (saldoError) {
+                        console.error('Error fetching saldo:', saldoError);
+                        // Set default saldo if there's an error
+                        setSaldo({ id: user.id, amount: 0, currency: 'IDR', last_transaction_at: null, updated_at: null });
+                    } else if (saldoData) {
+                        setSaldo(saldoData);
+                    } else {
+                        // Create default saldo if not exists
+                        setSaldo({ id: user.id, amount: 0, currency: 'IDR', last_transaction_at: null, updated_at: null });
+                    }
+                } catch (saldoErr) {
+                    console.error('Saldo query failed:', saldoErr);
+                    setSaldo({ id: user.id, amount: 0, currency: 'IDR', last_transaction_at: null, updated_at: null });
+                }
             }
 
             // 2. Ambil Riwayat Top Up (Uang Masuk) dengan Cursor
@@ -67,9 +89,9 @@ function Saldo() {
                 .order('created_at', { ascending: false })
                 .limit(itemsPerPage + 1);
 
-            if (!isInitial && topupHistory.length > 0) {
+            if (!isInitial && topupHistoryRef.current.length > 0) {
                 // Find the last transaction's created_at from the current state
-                const lastTransaction = topupHistory[topupHistory.length - 1];
+                const lastTransaction = topupHistoryRef.current[topupHistoryRef.current.length - 1];
                 if (lastTransaction && lastTransaction.created_at) {
                     console.log('Using cursor from last transaction:', lastTransaction.created_at);
                     topupQuery = topupQuery.lt('created_at', lastTransaction.created_at);
@@ -97,9 +119,9 @@ function Saldo() {
                 .order('created_at', { ascending: false })
                 .limit(itemsPerPage + 1);
 
-            if (!isInitial && topupHistory.length > 0) {
+            if (!isInitial && topupHistoryRef.current.length > 0) {
                 // Find the last transaction's created_at from the current state
-                const lastTransaction = topupHistory[topupHistory.length - 1];
+                const lastTransaction = topupHistoryRef.current[topupHistoryRef.current.length - 1];
                 if (lastTransaction && lastTransaction.created_at) {
                     console.log('Using cursor from last transaction:', lastTransaction.created_at);
                     paymentsQuery = paymentsQuery.lt('created_at', lastTransaction.created_at);
@@ -201,11 +223,13 @@ function Saldo() {
             setLoading(false);
             setIsLoadingMore(false);
         }
-    };
+    }, [user, itemsPerPage]);
 
     useEffect(() => {
-        if (!authLoading && user) fetchData(true);
-    }, [user, authLoading]);
+        if (!authLoading && user) {
+            fetchData(true);
+        }
+    }, [user, authLoading, fetchData]); // fetchData added as dependency
 
     // --- MIDTRANS SCRIPT LOADER & NOTIF HANDLER ---
     useEffect(() => {
@@ -226,12 +250,12 @@ function Saldo() {
                 pending: 'Pembayaran tertunda. Segera selesaikan!',
                 failed: 'Pembayaran gagal dilakukan.'
             };
-            setPaymentNotification({
-                type: status as 'failed' | 'pending' | 'success',
-                message: msgs[status as keyof typeof msgs] || ''
+            const notificationType = status === 'failed' ? 'error' : status === 'pending' ? 'info' : 'success';
+            showNotification({
+                message: msgs[status as keyof typeof msgs] || '',
+                type: notificationType as 'success' | 'error' | 'info'
             });
             window.history.replaceState({}, '', '/saldo');
-            setTimeout(() => setPaymentNotification({ type: null, message: '' }), 5000);
         }
 
         return () => { if (script.parentNode) script.parentNode.removeChild(script); };
@@ -245,7 +269,10 @@ function Saldo() {
         if (!window.snap) {
             const midtransClientKey = process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY;
             if (!midtransClientKey) {
-                alert('Konfigurasi pembayaran belum diatur. Silakan hubungi administrator.');
+                showNotification({
+                    message: 'Konfigurasi pembayaran belum diatur. Silakan hubungi administrator.',
+                    type: 'error'
+                });
                 setPayingOrderId(null);
                 return;
             }
@@ -261,7 +288,10 @@ function Saldo() {
             };
 
             script.onerror = () => {
-                alert('Gagal memuat sistem pembayaran. Silakan coba lagi.');
+                showNotification({
+                    message: 'Gagal memuat sistem pembayaran. Silakan coba lagi.',
+                    type: 'error'
+                });
                 setPayingOrderId(null);
             };
 
@@ -280,7 +310,10 @@ function Saldo() {
             onPending: () => window.location.href = '/saldo?payment=pending',
             onError: () => {
                 setPayingOrderId(null);
-                alert('Pembayaran gagal. Silakan coba lagi.');
+                showNotification({
+                    message: 'Pembayaran gagal. Silakan coba lagi.',
+                    type: 'error'
+                });
             },
             onClose: () => {
                 setPayingOrderId(null);
@@ -316,21 +349,6 @@ function Saldo() {
 
     return (
         <div className="min-h-screen pb-20" style={{ backgroundColor: 'var(--background)' }}>
-            {/* Notification Toast */}
-            {paymentNotification.type && (
-                <div className="fixed top-6 inset-x-4 md:left-1/2 md:-translate-x-1/2 md:w-max z-[100] animate-in slide-in-from-top-4">
-                    <div className={`px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 text-white font-bold border`} style={{
-                        backgroundColor: paymentNotification.type === 'success' ? 'var(--success)' :
-                            paymentNotification.type === 'pending' ? 'var(--warning)' : 'var(--error)',
-                        borderColor: paymentNotification.type === 'success' ? 'var(--success-muted)' :
-                            paymentNotification.type === 'pending' ? 'var(--warning-muted)' : 'var(--error-muted)'
-                    }}>
-                        {paymentNotification.message}
-                        <button onClick={() => setPaymentNotification({ type: null, message: '' })}>✕</button>
-                    </div>
-                </div>
-            )}
-
             {/* Blue Card Section */}
             <div className="max-w-4xl mx-auto px-4 pt-8 md:pt-12 mb-10">
                 <div className="relative overflow-hidden rounded-[2.5rem] p-8 md:p-12 shadow-2xl" style={{
@@ -397,8 +415,20 @@ function Saldo() {
                                                 <ArrowUpRight className="w-6 h-6" />
                                             }
                                         </div>
-                                        <div>
-                                            <p className="font-black" style={{ color: 'var(--text-primary)' }}>{trx.description}</p>
+                                        <div className={trx.type === 'payment' ? 'flex-grow' : ''}>
+                                            <p className="font-black" style={{ color: 'var(--text-primary)' }}>
+                                                {trx.type === 'payment' ? (
+                                                    <Link
+                                                        href={`/my-orders/${trx.order_id}`}
+                                                        className="hover:text-blue-600 transition-colors inline-flex items-center gap-2"
+                                                    >
+                                                        {trx.description}
+                                                        <ExternalLink className="w-4 h-4" />
+                                                    </Link>
+                                                ) : (
+                                                    trx.description
+                                                )}
+                                            </p>
                                             {trx.payment_method && (
                                                 <p className="text-xs font-bold mb-2" style={{ color: 'var(--text-muted)' }}>
                                                     Metode: {trx.payment_method}

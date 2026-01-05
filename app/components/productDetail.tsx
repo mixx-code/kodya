@@ -15,6 +15,8 @@ import Link from "next/link";
 import { useDarkMode } from "../contexts/DarkModeContext";
 import { ReviewList } from "./ReviewList";
 import { createClient } from "@/lib/supabase-client";
+import { useCart } from "../contexts/CartContext";
+import { showNotification } from "./Notification";
 
 interface ProductDetailProps {
     id: number;
@@ -49,6 +51,7 @@ function ProductDetail({
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const { isDarkMode } = useDarkMode();
+    const { addToCart } = useCart();
     const supabase = createClient();
 
     const handleBuyNow = async () => {
@@ -67,63 +70,14 @@ function ProductDetail({
     const handleAddToCart = async () => {
         setIsLoading(true);
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-
-            if (!user) {
-                alert('Silakan login terlebih dahulu');
-                setIsLoading(false);
-                return;
-            }
-
-            // Check if already in cart
-            const { data: existingCart } = await supabase
-                .from('cart')
-                .select('id, quantity')
-                .eq('user_id', user.id)
-                .eq('product_id', id)
-                .maybeSingle();
-
-            if (existingCart) {
-                // Update quantity if already in cart
-                const { error: updateError } = await supabase
-                    .from('cart')
-                    .update({
-                        quantity: existingCart.quantity + 1,
-                        updated_at: new Date().toISOString()
-                    })
-                    .eq('id', existingCart.id);
-
-                if (updateError) {
-                    console.error('Error updating cart:', updateError);
-                    alert('Gagal menambah quantity');
-                    setIsLoading(false);
-                    return;
-                }
-
-                alert('Quantity produk di cart berhasil ditambah!');
-            } else {
-                // Insert new cart item
-                const { error: insertError } = await supabase
-                    .from('cart')
-                    .insert({
-                        user_id: user.id,
-                        product_id: id,
-                        quantity: 1
-                    });
-
-                if (insertError) {
-                    console.error('Error adding to cart:', insertError);
-                    alert('Gagal menambahkan ke keranjang');
-                    setIsLoading(false);
-                    return;
-                }
-
-                alert('Produk berhasil ditambahkan ke keranjang!');
-            }
-
+            await addToCart(id);
+            showNotification({
+                message: `${title} berhasil ditambahkan ke keranjang!`,
+                type: 'success'
+            });
         } catch (error) {
             console.error('Error adding to cart:', error);
-            alert('Terjadi kesalahan');
+            alert('Gagal menambahkan ke keranjang');
         } finally {
             setIsLoading(false);
         }

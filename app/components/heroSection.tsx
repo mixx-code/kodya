@@ -16,7 +16,12 @@ interface CarouselItem {
 
 function HeroSection() {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [mounted, setMounted] = useState(false);
   const { isDarkMode } = useDarkMode();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const items: CarouselItem[] = [
     {
@@ -51,9 +56,10 @@ function HeroSection() {
 
   // Auto play
   useEffect(() => {
+    if (!mounted) return;
     const interval = setInterval(nextSlide, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [mounted]);
 
   return (
     <div className="relative w-full h-[350px] md:h-[500px] rounded-xl md:rounded-2xl overflow-hidden" style={{ backgroundColor: 'var(--card-background)', boxShadow: 'var(--card-shadow)' }}>
@@ -103,34 +109,39 @@ function HeroSection() {
       </div>
 
       {/* Navigation Buttons - Hidden on mobile */}
-      <button
-        onClick={prevSlide}
-        className="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 bg-white/30 hover:bg-white/50 backdrop-blur-sm p-2 rounded-full transition items-center justify-center"
-      >
-        <ChevronLeft className="w-6 h-6 text-white" />
-      </button>
+      {mounted && (
+        <>
+          <button
+            onClick={prevSlide}
+            className="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 bg-white/30 hover:bg-white/50 backdrop-blur-sm p-2 rounded-full transition items-center justify-center"
+          >
+            <ChevronLeft className="w-6 h-6 text-white" />
+          </button>
 
-      <button
-        onClick={nextSlide}
-        className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 bg-white/30 hover:bg-white/50 backdrop-blur-sm p-2 rounded-full transition items-center justify-center"
-      >
-        <ChevronRight className="w-6 h-6 text-white" />
-      </button>
+          <button
+            onClick={nextSlide}
+            className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 bg-white/30 hover:bg-white/50 backdrop-blur-sm p-2 rounded-full transition items-center justify-center"
+          >
+            <ChevronRight className="w-6 h-6 text-white" />
+          </button>
+        </>
+      )}
 
       {/* Dots Indicator */}
-      <div className="absolute bottom-4 md:bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-20">
-        {items.map((_, index) => (
-          <button
-            key={index}
-            onClick={() => goToSlide(index)}
-            className={`h-2 md:h-3 rounded-full transition-all ${
-              index === currentIndex
-                ? "bg-white w-6 md:w-8"
-                : "bg-white/50 hover:bg-white/75 w-2 md:w-3"
-            }`}
-          />
-        ))}
-      </div>
+      {mounted && (
+        <div className="absolute bottom-4 md:bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-20">
+          {items.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => goToSlide(index)}
+              className={`h-2 md:h-3 rounded-full transition-all ${index === currentIndex
+                  ? "bg-white w-6 md:w-8"
+                  : "bg-white/50 hover:bg-white/75 w-2 md:w-3"
+                }`}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

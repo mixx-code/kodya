@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node server.js",
+    "dev": "node server.js ",
+    "ngrok": "ngrok http --url=electric-hideously-drake.ngrok-free.app 3000",
     "build": "next build",
     "start": "NODE_ENV=production node server.js",
     "lint": "eslint"

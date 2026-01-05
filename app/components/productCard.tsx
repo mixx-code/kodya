@@ -6,6 +6,8 @@ import { ShoppingCart, Star, Check } from "lucide-react";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase-client";
 import { useDarkMode } from "../contexts/DarkModeContext";
+import { useCart } from "../contexts/CartContext";
+import { showNotification } from "./Notification";
 
 interface ProductCardProps {
     id: number;
@@ -32,6 +34,7 @@ export function ProductCard({
 }: ProductCardProps) {
     const supabase = createClient();
     const { isDarkMode } = useDarkMode();
+    const { addToCart } = useCart();
 
     const initialSrc = Array.isArray(image) && image.length > 0
         ? image[0]
@@ -52,18 +55,14 @@ export function ProductCard({
         }
     }, [id, mounted]);
 
-    // Format Rupiah untuk Price
-    const formattedPrice = new Intl.NumberFormat("id-ID", {
-        style: "currency",
-        currency: "IDR",
-        minimumFractionDigits: 0,
-    }).format(Number(price));
-
     const checkIfInCart = async () => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
 
-            if (!user) return;
+            if (!user) {
+                setIsInCart(false);
+                return;
+            }
 
             const { data, error } = await supabase
                 .from('cart')
@@ -73,15 +72,21 @@ export function ProductCard({
                 .maybeSingle();
 
             if (error) {
-                console.error('Error checking cart:', error);
-                return;
+                console.error('Error checking if in cart:', error);
+            } else {
+                setIsInCart(!!data);
             }
-
-            setIsInCart(!!data);
         } catch (error) {
-            console.error('Error checking cart:', error);
+            console.error('Error checking if in cart:', error);
         }
     };
+
+    // Format Rupiah untuk Price
+    const formattedPrice = new Intl.NumberFormat("id-ID", {
+        style: "currency",
+        currency: "IDR",
+        minimumFractionDigits: 0,
+    }).format(Number(price));
 
     const handleAddToCart = async (e: React.MouseEvent) => {
         e.preventDefault();
@@ -90,64 +95,15 @@ export function ProductCard({
         setIsLoading(true);
 
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-
-            if (!user) {
-                alert('Silakan login terlebih dahulu');
-                setIsLoading(false);
-                return;
-            }
-
-            // Check if already in cart
-            const { data: existingCart } = await supabase
-                .from('cart')
-                .select('id, quantity')
-                .eq('user_id', user.id)
-                .eq('product_id', id)
-                .maybeSingle();
-
-            if (existingCart) {
-                // Update quantity if already in cart
-                const { error: updateError } = await supabase
-                    .from('cart')
-                    .update({
-                        quantity: existingCart.quantity + 1,
-                        updated_at: new Date().toISOString()
-                    })
-                    .eq('id', existingCart.id);
-
-                if (updateError) {
-                    console.error('Error updating cart:', updateError);
-                    alert('Gagal menambah quantity');
-                    setIsLoading(false);
-                    return;
-                }
-
-                alert('Quantity produk di cart berhasil ditambah!');
-            } else {
-                // Insert new cart item
-                const { error: insertError } = await supabase
-                    .from('cart')
-                    .insert({
-                        user_id: user.id,
-                        product_id: id,
-                        quantity: 1
-                    });
-
-                if (insertError) {
-                    console.error('Error adding to cart:', insertError);
-                    alert('Gagal menambahkan ke keranjang');
-                    setIsLoading(false);
-                    return;
-                }
-
-                alert('Produk berhasil ditambahkan ke keranjang!');
-                setIsInCart(true);
-            }
-
+            await addToCart(id);
+            showNotification({
+                message: `${title} berhasil ditambahkan ke keranjang!`,
+                type: 'success'
+            });
+            setIsInCart(true);
         } catch (error) {
             console.error('Error adding to cart:', error);
-            alert('Terjadi kesalahan');
+            alert('Gagal menambahkan ke keranjang');
         } finally {
             setIsLoading(false);
         }
@@ -220,39 +176,55 @@ export function ProductCard({
                         <div>
                             <p className="text-xl font-bold" style={{ color: 'var(--accent)' }}>{formattedPrice}</p>
                         </div>
-                        <button
-                            onClick={handleAddToCart}
-                            disabled={isLoading}
-                            className={`
-                                p-2 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed
-                                ${isLoading ? 'animate-pulse' : 'hover:scale-110 transform'}
-                            `}
-                            style={{
-                                backgroundColor: mounted ? (mounted && isInCart ? 'var(--success)' : 'var(--accent)') : 'var(--accent)',
-                                color: 'var(--text-inverse)',
-                                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)'
-                            }}
-                            onMouseEnter={(e) => {
-                                if (!isLoading && mounted) {
-                                    e.currentTarget.style.boxShadow = '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)';
-                                    e.currentTarget.style.backgroundColor = mounted && isInCart ? 'var(--success)' : 'var(--accent-hover)';
-                                }
-                            }}
-                            onMouseLeave={(e) => {
-                                if (!isLoading && mounted) {
-                                    e.currentTarget.style.boxShadow = '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)';
-                                    e.currentTarget.style.backgroundColor = mounted && isInCart ? 'var(--success)' : 'var(--accent)';
-                                }
-                            }}
-                        >
-                            {isLoading ? (
-                                <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--text-inverse)', borderTopColor: 'transparent' }} />
-                            ) : mounted && isInCart ? (
-                                <Check className="w-5 h-5" style={{ filter: 'drop-shadow(0 1px 1px rgb(0 0 0 / 0.3))' }} />
+                        <div suppressHydrationWarning>
+                            {mounted ? (
+                                <button
+                                    onClick={handleAddToCart}
+                                    disabled={isLoading}
+                                    className={`
+                                        p-2 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed
+                                        ${isLoading ? 'animate-pulse' : 'hover:scale-110 transform'}
+                                    `}
+                                    style={{
+                                        backgroundColor: mounted ? (isInCart ? 'var(--success)' : 'var(--accent)') : 'var(--accent)',
+                                        color: 'var(--text-inverse)',
+                                        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        if (!isLoading && mounted) {
+                                            e.currentTarget.style.boxShadow = '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)';
+                                            e.currentTarget.style.backgroundColor = isInCart ? 'var(--success)' : 'var(--accent-hover)';
+                                        }
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        if (!isLoading && mounted) {
+                                            e.currentTarget.style.boxShadow = '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)';
+                                            e.currentTarget.style.backgroundColor = isInCart ? 'var(--success)' : 'var(--accent)';
+                                        }
+                                    }}
+                                >
+                                    {isLoading ? (
+                                        <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--text-inverse)', borderTopColor: 'transparent' }} />
+                                    ) : mounted && isInCart ? (
+                                        <Check className="w-5 h-5" style={{ filter: 'drop-shadow(0 1px 1px rgb(0 0 0 / 0.3))' }} />
+                                    ) : (
+                                        <ShoppingCart className="w-5 h-5" style={{ filter: 'drop-shadow(0 1px 1px rgb(0 0 0 / 0.3))' }} />
+                                    )}
+                                </button>
                             ) : (
-                                <ShoppingCart className="w-5 h-5" style={{ filter: 'drop-shadow(0 1px 1px rgb(0 0 0 / 0.3))' }} />
+                                <button
+                                    disabled
+                                    className="p-2 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                    style={{
+                                        backgroundColor: 'var(--accent)',
+                                        color: 'var(--text-inverse)',
+                                        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)'
+                                    }}
+                                >
+                                    <ShoppingCart className="w-5 h-5" style={{ filter: 'drop-shadow(0 1px 1px rgb(0 0 0 / 0.3))' }} />
+                                </button>
                             )}
-                        </button>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -11,6 +11,7 @@ interface Review {
   created_at: string | null;
   user_id: string | null;
   user_avatar: string | null;
+  user_name: string | null;
 }
 
 interface ReviewListProps {
@@ -47,7 +48,8 @@ export function ReviewList({ productId, refreshTrigger }: ReviewListProps) {
             comment: data.review.comment,
             created_at: data.review.created_at,
             user_id: data.review.user_id,
-            user_avatar: data.review.user_avatar
+            user_avatar: data.review.user_avatar,
+            user_name: null
           };
 
           const updatedReviews = [newReview, ...prevReviews];
@@ -111,8 +113,9 @@ export function ReviewList({ productId, refreshTrigger }: ReviewListProps) {
       if (error) {
         console.error('Error fetching reviews:', error);
       } else {
+        console.log('Reviews data:', data); // Debug log
         setReviews(data || []);
-        
+
         // Calculate average rating
         if (data && data.length > 0) {
           const validRatings = data.filter(r => r.rating !== null);
@@ -236,54 +239,90 @@ export function ReviewList({ productId, refreshTrigger }: ReviewListProps) {
           reviews.map((review) => (
             <div 
               key={review.id}
-              className="p-4 rounded-lg border"
+              className="p-6 rounded-xl border shadow-sm hover:shadow-md transition-all duration-200"
               style={{ 
                 backgroundColor: 'var(--card-background)',
                 borderColor: 'var(--border-primary)'
               }}
             >
-              <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0" style={{ 
-                    backgroundColor: 'var(--border-muted)' 
+              {/* Header dengan avatar dan info user */}
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 border-2" style={{
+                    backgroundColor: 'var(--border-muted)',
+                    borderColor: 'var(--accent-muted)'
                   }}>
                     {review.user_avatar ? (
                       <img
                         src={review.user_avatar}
                         alt="User avatar"
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          console.log('Image failed to load:', review.user_avatar);
+                          // Fallback to text avatar if image fails
+                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                        }}
                       />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center" style={{ 
-                        backgroundColor: 'var(--accent)',
-                        color: 'var(--text-inverse)'
-                      }}>
-                        <span className="text-sm font-bold">
-                          {review.user_id ? review.user_id.charAt(0).toUpperCase() : 'U'}
+                    ) : null}
+                    <div className={`w-full h-full flex items-center justify-center ${review.user_avatar ? 'hidden' : ''}`} style={{
+                      backgroundColor: 'var(--accent)',
+                      color: 'var(--text-inverse)'
+                    }}>
+                      <span className="text-sm font-bold">
+                        {review.user_name ? review.user_name.charAt(0).toUpperCase() : review.user_id ? review.user_id.charAt(0).toUpperCase() : 'U'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      {review.user_name && (
+                        <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                          {review.user_name}
                         </span>
-                      </div>
-                    )}
+                      )}
+                      <span className="text-xs px-2 py-1 rounded-full" style={{
+                        backgroundColor: 'var(--accent-muted)',
+                        color: 'var(--accent)'
+                      }}>
+                        Pembelian Terverifikasi
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {renderStars(review.rating)}
+                      <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                        {formatDate(review.created_at)}
+                      </span>
+                    </div>
                   </div>
-                
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    {renderStars(review.rating)}
-                    <span className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                      {formatDate(review.created_at)}
-                    </span>
-                  </div>
-                  
-                  {review.comment && (
-                    <p className="text-sm" style={{ color: 'var(--text-primary)' }}>
+                </div>
+              </div>
+
+              {/* Content review */}
+              <div className="space-y-3">
+                {review.comment && (
+                  <div className="p-4 rounded-lg" style={{
+                    backgroundColor: 'var(--background)'
+                  }}>
+                    <p className="text-sm leading-relaxed" style={{ color: 'var(--text-primary)' }}>
                       {review.comment}
                     </p>
-                  )}
-                  
-                  {!review.comment && (
+                  </div>
+                )}
+
+                {!review.comment && (
+                  <div className="text-center py-4 rounded-lg border border-dashed" style={{
+                    borderColor: 'var(--border-muted)',
+                    backgroundColor: 'var(--background)'
+                  }}>
                     <p className="text-sm italic" style={{ color: 'var(--text-muted)' }}>
                       Pengguna tidak memberikan komentar
                     </p>
-                  )}
-                </div>
+                  </div>
+                )}
+
+
               </div>
             </div>
           ))

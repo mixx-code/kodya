@@ -227,7 +227,7 @@ export default function DashboardAdmin() {
 
         {/* Quick Action */}
         <div className="mb-8">
-          <Link href="/admin/products/create" className="group flex w-56 items-center gap-2 px-5 py-3 rounded-xl font-semibold transition-all shadow-lg active:scale-95"
+          <Link href="/products/create" className="group flex w-56 items-center gap-2 px-5 py-3 rounded-xl font-semibold transition-all shadow-lg active:scale-95"
             style={{
               backgroundColor: 'var(--primary)',
               color: 'var(--text-inverse)'

@@ -4,6 +4,7 @@ import "./globals.css";
 import Navbar from "./components/navbar";
 import LayoutBeranda from "./components/layoutBeranda";
 import { DarkModeProvider } from "./contexts/DarkModeContext";
+import { CartProvider } from "./contexts/CartContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,10 +32,12 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased relative`}
       >
         <DarkModeProvider>
-          <Navbar />
-          <LayoutBeranda>
-            {children}
-          </LayoutBeranda>
+          <CartProvider>
+            <Navbar />
+            <LayoutBeranda>
+              {children}
+            </LayoutBeranda>
+          </CartProvider>
         </DarkModeProvider>
       </body>
     </html>

@@ -11,9 +11,13 @@ import {
   ArrowRight,
   ChevronLeft,
   ChevronRight,
-  Loader2
+  Loader2,
+  ArrowLeft
 } from "lucide-react";
 import { createClient } from "@/lib/supabase-client";
+import { useCart } from "@/app/contexts/CartContext";
+import Alert from "@/app/components/Alert";
+import { useAlert } from "@/hooks/useAlert";
 
 interface CartItem {
   id: string;
@@ -39,10 +43,16 @@ function Cart() {
   const [hasMore, setHasMore] = useState(false);
   const [cursor, setCursor] = useState<string | null>(null);
   const [previousCursors, setPreviousCursors] = useState<(string | null)[]>([]);
+  const { removeFromCart: removeFromCartContext, updateCartCount } = useCart();
+  const { alert, showAlert, showConfirm, hideAlert } = useAlert();
 
   useEffect(() => {
     fetchCartItems();
   }, [cursor]);
+
+  useEffect(() => {
+    updateCartCount();
+  }, [cartItems]);
 
   const fetchCartItems = async () => {
     setLoading(true);
@@ -116,7 +126,7 @@ function Cart() {
 
       if (error) {
         console.error('Error updating quantity:', error);
-        alert('Gagal update quantity');
+        showAlert('error', 'Gagal', 'Gagal memperbarui jumlah produk');
         return;
       }
 
@@ -137,27 +147,24 @@ function Cart() {
   };
 
   const removeFromCart = async (cartId: string) => {
-    if (!confirm('Hapus produk dari keranjang?')) return;
+    const confirmed = await showConfirm(
+      'Hapus Produk',
+      'Apakah Anda yakin ingin menghapus produk ini dari keranjang?'
+    );
+
+    if (!confirmed) return;
 
     setUpdating(cartId);
     try {
-      const { error } = await supabase
-        .from('cart')
-        .delete()
-        .eq('id', cartId);
-
-      if (error) {
-        console.error('Error removing from cart:', error);
-        alert('Gagal menghapus dari keranjang');
-        return;
-      }
+      await removeFromCartContext(cartId);
 
       // Remove from local state
       setCartItems(prevItems => prevItems.filter(item => item.id !== cartId));
-      alert('Produk berhasil dihapus dari keranjang');
+      showAlert('success', 'Berhasil', 'Produk berhasil dihapus dari keranjang');
 
     } catch (error) {
       console.error('Error:', error);
+      showAlert('error', 'Gagal', 'Gagal menghapus produk dari keranjang');
     } finally {
       setUpdating(null);
     }
@@ -231,6 +238,13 @@ function Cart() {
     <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8" style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)' }}>
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 mb-4"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            Kembali ke Beranda
+          </Link>
           <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>
             Keranjang Belanja
           </h1>
@@ -450,6 +464,17 @@ function Cart() {
           </div>
         </div>
       </div>
+      {/* Custom Alert Modal */}
+      <Alert
+        show={alert.show}
+        type={alert.type}
+        title={alert.title}
+        message={alert.message}
+        isConfirm={alert.isConfirm}
+        onConfirm={alert.onConfirm}
+        onCancel={alert.onCancel}
+        onClose={hideAlert}
+      />
     </div>
   );
 }
