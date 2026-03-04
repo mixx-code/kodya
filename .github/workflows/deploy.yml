@@ -3,7 +3,7 @@ name: Deploy Kodya
 on:
   push:
     branches:
-      - master  # Ganti jadi 'master' jika itu branch utama kamu
+      - master
 
 jobs:
   deploy:
