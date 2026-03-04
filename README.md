@@ -167,3 +167,144 @@ kodya
    └─ supabase.ts
 
 ```
+```
+kodya
+├─ .windsurf
+│  └─ workflows
+│     └─ cart.md
+├─ app
+│  ├─ (admin)
+│  │  ├─ dashboard
+│  │  │  ├─ actions
+│  │  │  │  └─ admin.ts
+│  │  │  └─ page.tsx
+│  │  ├─ layout.tsx
+│  │  └─ products
+│  │     ├─ create
+│  │     │  ├─ actions.ts
+│  │     │  ├─ Editor.tsx
+│  │     │  └─ page.tsx
+│  │     ├─ page.tsx
+│  │     └─ [id]
+│  │        ├─ edit
+│  │        │  ├─ actions.ts
+│  │        │  └─ page.tsx
+│  │        └─ page.tsx
+│  ├─ (customer)
+│  │  ├─ cart
+│  │  │  └─ page.tsx
+│  │  ├─ checkout
+│  │  │  └─ page.tsx
+│  │  ├─ layout.tsx
+│  │  ├─ my-orders
+│  │  │  ├─ page.tsx
+│  │  │  └─ [id]
+│  │  │     └─ page.tsx
+│  │  ├─ product
+│  │  │  ├─ actions
+│  │  │  │  ├─ categories.ts
+│  │  │  │  └─ product.ts
+│  │  │  ├─ category
+│  │  │  │  ├─ products.ts
+│  │  │  │  └─ [category]
+│  │  │  │     ├─ CategoryClientContent.tsx
+│  │  │  │     └─ page.tsx
+│  │  │  └─ [id]
+│  │  │     └─ page.tsx
+│  │  └─ saldo
+│  │     └─ page.tsx
+│  ├─ actions.ts
+│  ├─ api
+│  │  ├─ payment
+│  │  │  ├─ mark-opened
+│  │  │  │  └─ route.ts
+│  │  │  ├─ notification
+│  │  │  │  └─ route.ts
+│  │  │  ├─ regenerate
+│  │  │  │  └─ route.ts
+│  │  │  ├─ route.ts
+│  │  │  └─ webhook
+│  │  │     └─ route.ts
+│  │  └─ websocket
+│  │     └─ route.ts
+│  ├─ auth
+│  │  ├─ callback
+│  │  │  └─ route.ts
+│  │  ├─ login
+│  │  │  └─ page.tsx
+│  │  └─ register
+│  │     └─ page.tsx
+│  ├─ components
+│  │  ├─ Alert.tsx
+│  │  ├─ AlertExample.tsx
+│  │  ├─ categorySection.tsx
+│  │  ├─ heroSection.tsx
+│  │  ├─ layoutBeranda.tsx
+│  │  ├─ LottieNotFound.tsx
+│  │  ├─ navbar.tsx
+│  │  ├─ Notification.tsx
+│  │  ├─ paymentModal.tsx
+│  │  ├─ productCard.tsx
+│  │  ├─ productDetail.tsx
+│  │  ├─ ProductListClient.tsx
+│  │  ├─ README.md
+│  │  ├─ ReviewForm.tsx
+│  │  ├─ ReviewList.tsx
+│  │  └─ showWindow.tsx
+│  ├─ contexts
+│  │  ├─ CartContext.tsx
+│  │  └─ DarkModeContext.tsx
+│  ├─ favicon.ico
+│  ├─ forbidden
+│  │  └─ page.tsx
+│  ├─ globals.css
+│  ├─ landing
+│  │  ├─ page.tsx
+│  │  └─ [id]
+│  │     └─ page.tsx
+│  ├─ layout.tsx
+│  ├─ middleware.ts
+│  ├─ not-found.tsx
+│  ├─ page.tsx
+│  └─ profile
+│     └─ page.tsx
+├─ docker-compose.yaml
+├─ Dockerfile
+├─ eslint.config.mjs
+├─ hooks
+│  ├─ useAlert.ts
+│  ├─ useDebounce.ts
+│  └─ useSupabase.ts
+├─ lib
+│  ├─ supabase-client.ts
+│  ├─ supabase-server.ts
+│  ├─ supabase.ts
+│  └─ websocket.ts
+├─ next.config.ts
+├─ package-lock.json
+├─ package.json
+├─ postcss.config.mjs
+├─ public
+│  ├─ file.svg
+│  ├─ globe.svg
+│  ├─ logo.png
+│  ├─ lottie
+│  │  └─ 404.json
+│  ├─ next.svg
+│  ├─ product-1.jpg
+│  ├─ product-2.jpg
+│  ├─ vercel.svg
+│  └─ window.svg
+├─ README.md
+├─ server.js
+├─ supabase
+│  ├─ .temp
+│  │  └─ cli-latest
+│  └─ config.toml
+├─ tsconfig.json
+├─ types
+│  ├─ midtrans.d.ts
+│  └─ supabase.ts
+└─ WEBSOCKET_README.md
+
+```
