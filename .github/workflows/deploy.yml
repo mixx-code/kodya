@@ -22,7 +22,7 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           script: |
             cd ~/apps/kodya
-            git pull origin main
+            git pull origin master
 
             # Tulis ulang .env.local dari secrets
             cat > .env.local << 'EOF'
